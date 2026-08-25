@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v5';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v6';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -334,18 +334,6 @@ function updateEncState() {
   el.textContent = modelChosen ? (encActive() ? t('encAes') : t('encPlain')) : '-';
 }
 
-function updatePreview() {
-  const el = $('frame-preview'); if (!el) return;
-  if (!modelChosen || !activeProto.speed) { el.textContent = '-'; return; }
-  const kmh = parseInt(($('speed-in') || {}).value, 10);
-  if (isNaN(kmh)) { el.textContent = '-'; return; }
-  const b3 = (activeProto.family === 'SO3') ? so3Secret : 0x00;
-  const plain = buildFrameD7(0xA9, speedPayload(kmh), b3);
-  let txt = bytesToHex(plain);
-  if (encActive() && encKey()) txt += '  ->  ' + bytesToHex(aesEcbEncrypt(plain, encKey()));
-  el.textContent = txt;
-}
-
 // --------------------------- model selection ---------------------------
 
 function buildModelDropdown() {
@@ -379,7 +367,6 @@ function applyModelUi() {
   const cb = $('btn-conn'); if (cb && !connected) cb.disabled = !on;
   setControlsEnabled(connected);
   updateEncState();
-  updatePreview();
 }
 function setModel(id, quiet) {
   const p = PROTOCOLS[id];
@@ -597,7 +584,6 @@ function applyDetectedVersion(major, minor) {
     const aes = protocolIsV52();
     log('firmware ' + major + '.' + minor + ' -> protocol ' + proto + ' -> ' + (aes ? 'AES-128-ECB' : 'plaintext'), 'log-ok');
     updateEncState();
-    updatePreview();
   }
   if (!initSent) {
     initSent = true;
@@ -613,7 +599,7 @@ function applyDetectedVersion(major, minor) {
 function updateSo3Secret(b) {
   if (b.length < 17) return;
   const s = so3CalcSecret(b[3], b[15], b[16]);
-  if (s !== so3Secret) { so3Secret = s; log('  SO3 secret updated to 0x' + s.toString(16).padStart(2, '0') + ' (from b3,b15,b16). used in byte 3 of outgoing frames.'); updatePreview(); }
+  if (s !== so3Secret) { so3Secret = s; log('  SO3 secret updated to 0x' + s.toString(16).padStart(2, '0') + ' (from b3,b15,b16). used in byte 3 of outgoing frames.'); }
 }
 
 // --------------------------- telemetry decoders ---------------------------
@@ -945,7 +931,6 @@ function applyLang() {
   document.querySelectorAll('#langs button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.lang === lang)); });
   { const el = $('status'); setStatus(el ? el.dataset.state : 'disconnected'); }
   updateEncState();
-  updatePreview();
 }
 function initLangSwitch() {
   document.querySelectorAll('#langs button').forEach(b => {
@@ -1141,13 +1126,11 @@ window.addEventListener('DOMContentLoaded', () => {
   { const b = $('btn-ind');   if (b) b.addEventListener('click', () => cmdIndicator($('ind-in').value === '1')); }
   { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
   { const b = $('btn-name');  if (b) b.addEventListener('click', () => cmdSetName($('name-in').value)); }
-  $('speed-in').addEventListener('input', updatePreview);
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }
 
   setControlsEnabled(false);
   updateEncState();
-  updatePreview();
   if (!navigator.bluetooth) log('Web Bluetooth not available. On iOS use the Bluefy browser.', 'log-err');
   parseDeepLink();
   if (pendingDeepAction) tryAutoReconnect();

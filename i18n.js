@@ -47,7 +47,6 @@ window.I18N = {
     modeNormal: "normal",
     modeSport: "sport",
     btnSetMode: "Setzen",
-    framePrefix: "Frame-Vorschau:",
     settingsHint: "Die Höchstgeschwindigkeit in km/h. Ob der Controller hohe Werte annimmt, ist die offene Frage, die in diesem Test-Lauf verifiziert werden soll.",
 
     noSpeedTitle: "Kein Speed per Bluetooth",
@@ -159,7 +158,6 @@ window.I18N = {
     modeNormal: "normal",
     modeSport: "sport",
     btnSetMode: "Set",
-    framePrefix: "Frame preview:",
     settingsHint: "The top speed in km/h. Whether the controller accepts high values is the open question that this test run is meant to verify.",
 
     noSpeedTitle: "No speed over Bluetooth",

@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v4';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v5';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -207,6 +207,9 @@ let so3Secret = 0;
 // initSent marks that the connect command has been sent once the version is known (SO4 path);
 // linkTimer is the fallback if the scooter never pushes a version frame.
 let initSent = false, linkTimer = null;
+// No model is preselected. Until the user picks one, only the universal UI (that applies to every
+// scooter) is shown and connect is disabled; the model-specific cards are built dynamically.
+let modelChosen = false;
 
 function cryptoLabel(p) {
   const c = p.crypto;
@@ -328,12 +331,12 @@ function encActive() {
 function encKey() { return activeProto.crypto.key ? hexToBytes(activeProto.crypto.key) : null; }
 function updateEncState() {
   const el = $('enc-state'); if (!el) return;
-  el.textContent = encActive() ? t('encAes') : t('encPlain');
+  el.textContent = modelChosen ? (encActive() ? t('encAes') : t('encPlain')) : '-';
 }
 
 function updatePreview() {
   const el = $('frame-preview'); if (!el) return;
-  if (!activeProto.speed) { el.textContent = '-'; return; }
+  if (!modelChosen || !activeProto.speed) { el.textContent = '-'; return; }
   const kmh = parseInt(($('speed-in') || {}).value, 10);
   if (isNaN(kmh)) { el.textContent = '-'; return; }
   const b3 = (activeProto.family === 'SO3') ? so3Secret : 0x00;
@@ -348,6 +351,9 @@ function updatePreview() {
 function buildModelDropdown() {
   const sel = $('model-in'); if (!sel) return;
   sel.textContent = '';   // clear existing options without an innerHTML sink
+  const ph = document.createElement('option');
+  ph.value = ''; ph.setAttribute('data-t', 'modelChoose'); ph.textContent = t('modelChoose');
+  sel.appendChild(ph);
   PROTOCOL_ORDER.forEach(id => {
     const p = PROTOCOLS[id]; if (!p) return;
     const opt = document.createElement('option');
@@ -358,24 +364,35 @@ function buildModelDropdown() {
 // Show/hide and enable the per-model cards: the speed/mode card and battery card only for models
 // that support them, and a clear notice for models without a BLE speed command.
 function applyModelUi() {
-  const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !activeProto.speed;
-  const batCard = $('bat-card'); if (batCard) batCard.hidden = activeProto.family !== 'D7';
-  const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = activeProto.speed;
-  const caps = modelCaps();
+  const on = modelChosen;
+  const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || !activeProto.speed;
+  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || activeProto.family !== 'D7';
+  const lockCard = $('lock-card'); if (lockCard) lockCard.hidden = !on;
+  const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || activeProto.speed;
+  const caps = on ? modelCaps() : {};
   const rows = { 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
                  'row-ind': caps.indicator, 'row-unit': caps.unit, 'row-name': caps.name };
   let anyMore = false;
   Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
   const moreCard = $('more-card'); if (moreCard) moreCard.hidden = !anyMore;
-  const sel = $('model-in'); if (sel && sel.value !== activeProto.id) sel.value = activeProto.id;
+  const sel = $('model-in'); if (sel && on && sel.value !== activeProto.id) sel.value = activeProto.id;
+  const cb = $('btn-conn'); if (cb && !connected) cb.disabled = !on;
   setControlsEnabled(connected);
   updateEncState();
   updatePreview();
 }
 function setModel(id, quiet) {
   const p = PROTOCOLS[id];
-  if (!p) return;
+  if (!p) {   // placeholder / no model chosen: show only the universal UI, disable connect
+    modelChosen = false;
+    if (connected) { log('model cleared while connected -> disconnecting'); disconnectBle(); }
+    const sel = $('model-in'); if (sel) sel.value = '';
+    applyModelUi();
+    if (!quiet) log('no model selected. Pick your model to see its controls.');
+    return;
+  }
   if (connected) { log('model changed while connected -> disconnecting to switch protocol'); disconnectBle(); }
+  modelChosen = true;
   activeProto = p;
   usedTransport = TRANSPORTS[p.transport];
   so3Secret = 0;
@@ -502,6 +519,7 @@ function onDisconnected() {
   so3Secret = 0;
   if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
   setStatus('disconnected');
+  const cb = $('btn-conn'); if (cb) cb.disabled = !modelChosen;
   setControlsEnabled(false);
   resetTiles();
   const info = $('devinfo'); if (info) info.textContent = '';
@@ -1093,13 +1111,17 @@ window.addEventListener('DOMContentLoaded', () => {
   // Restore the saved model (default SO4), then render the language and the per-model UI.
   let saved = null;
   try { saved = localStorage.getItem(LS_MODEL); } catch (e) {}
-  setModel(PROTOCOLS[saved] ? saved : DEFAULT_MODEL, true);
+  setModel(PROTOCOLS[saved] ? saved : '', true);
   applyLang();
 
   // The AES self-test result, in the log and under the encryption card.
   log('AES self-test (both keys, encrypt+decrypt): ' + (AES_OK ? 'OK' : 'FAILED'), AES_OK ? 'log-ok' : 'log-err');
-  log('model: ' + activeProto.name + ' [' + activeProto.family + (activeProto.variant ? '/' + activeProto.variant : '') +
-      ', ' + TRANSPORTS[activeProto.transport].name + ', crypto ' + cryptoLabel(activeProto) + ', speed ' + (activeProto.speed ? 'yes' : 'no') + ']');
+  if (modelChosen) {
+    log('model: ' + activeProto.name + ' [' + activeProto.family + (activeProto.variant ? '/' + activeProto.variant : '') +
+        ', ' + TRANSPORTS[activeProto.transport].name + ', crypto ' + cryptoLabel(activeProto) + ', speed ' + (activeProto.speed ? 'yes' : 'no') + ']');
+  } else {
+    log('no model selected yet. Pick your model to begin.');
+  }
 
   $('btn-conn').addEventListener('click', () => {
     if ($('btn-conn').dataset.act === 'disconnect') disconnectBle(); else pickAndConnect();

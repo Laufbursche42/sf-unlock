@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v2';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v3';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -198,7 +198,7 @@ const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', 
 let activeProto = PROTOCOLS[DEFAULT_MODEL];
 let usedTransport = TRANSPORTS[activeProto.transport];   // the transport actually found on connect
 let device = null, server = null, writeChar = null, notifyChar = null;
-let connected = false, connecting = false, userDisconnect = false;
+let connected = false, connecting = false;
 // SO4 only: firmware version, read from byte 12 of an inbound frame (high nibble major, low nibble
 // minor), used to pick plaintext (V42/V51) vs AES (V52). Stays null until a frame reveals it.
 let fwMajor = null, fwMinor = null;
@@ -260,7 +260,7 @@ function copyLogFallback(text) {
   try {
     const ta = document.createElement('textarea');
     ta.value = text; ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+    ta.className = 'copy-offscreen';
     document.body.appendChild(ta);
     ta.select(); ta.setSelectionRange(0, text.length);
     const ok = document.execCommand && document.execCommand('copy');
@@ -387,13 +387,16 @@ function setModel(id, quiet) {
 async function pickAndConnect() {
   if (!navigator.bluetooth) { log('Web Bluetooth not available. Use Bluefy (iOS) or Chrome/Edge.', 'log-err'); return; }
   try {
-    userDisconnect = false;
     log('scanning for ' + activeProto.name + ' (' + activeProto.prefixes.join('/') + ') ...');
     device = await navigator.bluetooth.requestDevice({
       filters: activeProto.prefixes.map(p => ({ namePrefix: p })),
       optionalServices: ALL_SERVICES,
     });
     log('selected: ' + (device.name || '(no name)') + ' [' + device.id + ']');
+    if (activeProto.variant === 'so4' && device.name && device.name.startsWith('SFSO4UL')) {
+      log('selected device is a SO4 UL (SO6 family), switching model automatically.', 'log-err');
+      setModel('so4ul', true);
+    }
     await connectGatt(device);
   } catch (e) {
     log('scan/connect cancelled: ' + e, 'log-err');
@@ -426,10 +429,10 @@ async function connectGatt(dev) {
     connected = false;
     server = await device.gatt.connect();
     const svc = await resolveService(server);
-    if (!svc) { setStatus('no-service'); log('no known service found (' + TRANSPORTS[activeProto.transport].name + ' expected). Wrong model selected? Please report.', 'log-err'); return; }
+    if (!svc) { try { device.gatt.disconnect(); } catch (e) {} setStatus('no-service'); log('no known service found (' + TRANSPORTS[activeProto.transport].name + ' expected). Wrong model selected? Please report.', 'log-err'); return; }
     writeChar = await svc.getCharacteristic(usedTransport.write).catch(() => null);
     notifyChar = await svc.getCharacteristic(usedTransport.notify).catch(() => null);
-    if (!writeChar || !notifyChar) { setStatus('no-char'); log('write/notify characteristic missing on ' + usedTransport.name, 'log-err'); return; }
+    if (!writeChar || !notifyChar) { try { device.gatt.disconnect(); } catch (e) {} setStatus('no-char'); log('write/notify characteristic missing on ' + usedTransport.name, 'log-err'); return; }
     await notifyChar.startNotifications();
     notifyChar.removeEventListener('characteristicvaluechanged', onCharacteristicValue);
     notifyChar.addEventListener('characteristicvaluechanged', onCharacteristicValue);
@@ -485,6 +488,7 @@ function afterConnect() {
 
 function onDisconnected() {
   connected = false;
+  clearAcks();
   initSent = false;
   fwMajor = null; fwMinor = null;
   so3Secret = 0;
@@ -510,7 +514,6 @@ function onLinkTimeout() {
 }
 
 function disconnectBle() {
-  userDisconnect = true;
   try { if (device && device.gatt.connected) device.gatt.disconnect(); } catch (e) {}
   connected = false;
   if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
@@ -537,6 +540,7 @@ function handleFrame(b) {
   log('  frame: len=' + b.length + ', checksum ' +
       (chkOk ? 'ok' : 'MISMATCH (got 0x' + b[b.length - 1].toString(16).padStart(2, '0') + ', calc 0x' + sum.toString(16).padStart(2, '0') + ')'));
   const op = b[2];
+  resolveAck('op:' + op, bytesToHex(b));
   if (activeProto.family === 'SO3') {
     if (op === 0x1D) { updateSo3Secret(b); decodeSo3Realtime(b); }
     else if (op === 0x2D) decodeSo3Status2(b);
@@ -694,6 +698,9 @@ function handleFrameSO6(b) {
   if (data.length < 3) { log('  SO6 frame too short after decrypt.'); return; }
   const g = data[0], sub = data[1], plen = data[2];
   log('  SO6 frame: group=0x' + g.toString(16).padStart(2, '0') + ' sub=0x' + sub.toString(16).padStart(2, '0') + ' payloadLen=' + plen);
+  const echoHex = bytesToHex(data);
+  resolveAck('so6:' + g + ':' + sub, echoHex);
+  if (g === 0x05 && sub === 0x0E && !resolveAck('so6:5:12', echoHex)) resolveAck('so6:5:1', echoHex);   // {05,0E} lock-status confirms a lock/unlock
   if (g === 0x05 && sub === 0x46) decodeRealtimeSo6(data);
 }
 function decodeRealtimeSo6(d) {
@@ -719,9 +726,39 @@ async function writeFrame(bytes) {
   return wc.writeValue(bytes);
 }
 
+// --------------------------- command acknowledgements ---------------------------
+// Protocol-faithful port of the app's _executeCommand: for each user command we remember the opcode
+// (D7/SO3) or the group/sub (SO6) we sent, then wait for the first incoming frame that echoes it.
+// A matching echo is the vehicle's Success response for that command; no echo within the window is
+// logged as "no confirmation". An echo proves the controller ACCEPTED the command, not that it will
+// ride the value - the real speed only shows in the live telemetry while riding.
+const ACK_TIMEOUT_MS = 3000;
+const pendingAcks = new Map();   // ack-key -> { label, timer }
+function armAck(key, label) {
+  const prev = pendingAcks.get(key);
+  if (prev) clearTimeout(prev.timer);
+  const timer = setTimeout(() => {
+    pendingAcks.delete(key);
+    log('  no confirmation for "' + label + '" within ' + (ACK_TIMEOUT_MS / 1000) + 's (scooter sent no matching echo).', 'log-err');
+  }, ACK_TIMEOUT_MS);
+  pendingAcks.set(key, { label, timer });
+}
+function resolveAck(key, echoHex) {
+  const p = pendingAcks.get(key);
+  if (!p) return false;
+  clearTimeout(p.timer);
+  pendingAcks.delete(key);
+  log('  confirmed: scooter acknowledged "' + p.label + '" (echo ' + echoHex + ').', 'log-ok');
+  return true;
+}
+function clearAcks() {
+  pendingAcks.forEach(p => clearTimeout(p.timer));
+  pendingAcks.clear();
+}
+
 // Encrypt (if the active model requires it) and write a pre-built plaintext frame, logging both the
 // wire bytes and the plaintext.
-async function transmit(plain, label) {
+async function transmit(plain, label, ackKey) {
   if (!connected || !writeChar) { log('not connected', 'log-err'); return; }
   try {
     let out = plain;
@@ -734,6 +771,7 @@ async function transmit(plain, label) {
       log('firmware not read yet, sending plaintext (SO4 stays plaintext below 5.2).');
     }
     log('TX  ' + bytesToHex(out) + '   (' + label + ', ' + note + ', plain ' + bytesToHex(plain) + ')', 'log-tx');
+    if (ackKey) armAck(ackKey, label);
     await writeFrame(out);
     log('sent.', 'log-ok');
   } catch (e) {
@@ -741,40 +779,40 @@ async function transmit(plain, label) {
   }
 }
 
-function cmdSetMaxSpeed(kmh) {
+function cmdSetMaxSpeed(kmh, persist) {
   if (!activeProto.speed) { log('this model has no BLE speed command.', 'log-err'); return; }
-  try { localStorage.setItem(LS_SPEED, String(kmh)); } catch (e) {}
+  if (persist !== false) { try { localStorage.setItem(LS_SPEED, String(kmh)); } catch (e) {} }
   const b3 = (activeProto.family === 'SO3') ? so3Secret : 0x00;
-  transmit(buildFrameD7(0xA9, speedPayload(kmh), b3), 'max speed ' + kmh + ' km/h 0xA9');
+  transmit(buildFrameD7(0xA9, speedPayload(kmh), b3), 'max speed ' + kmh + ' km/h 0xA9', 'op:' + 0xA9);
 }
 function cmdSetSpeedMode(mode) {
   if (!activeProto.speed) { log('this model has no BLE speed command.', 'log-err'); return; }
-  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xA4, [0x00, mode & 0xff], so3Secret), 'ride mode ' + mode + ' 0xA4');
-  else transmit(buildFrameD7(0xA3, [mode & 0xff], 0x00), 'ride mode ' + mode + ' 0xA3');
+  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xA4, [0x00, mode & 0xff], so3Secret), 'ride mode ' + mode + ' 0xA4', 'op:' + 0xA4);
+  else transmit(buildFrameD7(0xA3, [mode & 0xff], 0x00), 'ride mode ' + mode + ' 0xA3', 'op:' + 0xA3);
 }
 function cmdUnlock() {
   if (activeProto.family === 'SO6') {
     const pin = activeProto.so6pin ? [0x30, 0x30, 0x30, 0x30, 0x30, 0x30] : [];
-    transmit(buildFrameSO6(0x05, 0x01, pin), 'unlock {05,01}' + (activeProto.so6pin ? ' PIN 000000' : ''));
+    transmit(buildFrameSO6(0x05, 0x01, pin), 'unlock {05,01}' + (activeProto.so6pin ? ' PIN 000000' : ''), 'so6:5:1');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA2, [0x00, 0x00], so3Secret), 'unlock 0xA2');
+    transmit(buildFrameD7(0xA2, [0x00, 0x00], so3Secret), 'unlock 0xA2', 'op:' + 0xA2);
   } else {
-    transmit(buildFrameD7(0xA0, [0x00], 0x00), 'unlock 0xA0');
+    transmit(buildFrameD7(0xA0, [0x00], 0x00), 'unlock 0xA0', 'op:' + 0xA0);
   }
 }
 function cmdLock() {
   if (activeProto.family === 'SO6') {
-    transmit(buildFrameSO6(0x05, 0x0C, []), 'lock {05,0C}');
+    transmit(buildFrameSO6(0x05, 0x0C, []), 'lock {05,0C}', 'so6:5:12');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA2, [0x00, 0x01], so3Secret), 'lock 0xA2');
+    transmit(buildFrameD7(0xA2, [0x00, 0x01], so3Secret), 'lock 0xA2', 'op:' + 0xA2);
   } else {
-    transmit(buildFrameD7(0xA0, [0x01], 0x00), 'lock 0xA0');
+    transmit(buildFrameD7(0xA0, [0x01], 0x00), 'lock 0xA0', 'op:' + 0xA0);
   }
 }
 function cmdBatteryUnlock() {
   if (activeProto.family !== 'D7') { log('this model has no battery-unlock command.', 'log-err'); return; }
   const val = (activeProto.variant === 'so4') ? 0x01 : 0x00;   // SO4 uses 0x01, so5base uses 0x00
-  transmit(buildFrameD7(0xD5, [val], 0x00), 'battery unlock 0xD5 [' + val + ']');
+  transmit(buildFrameD7(0xD5, [val], 0x00), 'battery unlock 0xD5 [' + val + ']', 'op:' + 0xD5);
 }
 
 // --------------------------- shortcut deep-link + auto-reconnect ---------------------------
@@ -796,12 +834,13 @@ function maybeRunDeepAction() {
   if (!activeProto.speed) { log('shortcut ' + a + ' ignored: this model has no BLE speed command.', 'log-err'); return; }
   let kmh = 22;   // "slow" throttles back to the legal 22 km/h
   if (a === 'fast') {   // "fast" restores the last max speed the user set (or the input field)
-    const saved = parseInt(localStorage.getItem(LS_SPEED) || '', 10);
+    let saved = NaN;
+    try { saved = parseInt(localStorage.getItem(LS_SPEED) || '', 10); } catch (e) {}
     kmh = isNaN(saved) ? parseInt(($('speed-in') || {}).value, 10) : saved;
   }
   if (isNaN(kmh)) kmh = 22;
   log('shortcut: set max speed ' + kmh + ' km/h (' + a + ')');
-  cmdSetMaxSpeed(kmh);
+  cmdSetMaxSpeed(kmh, a === 'fast');   // do not let "slow" overwrite the saved fast speed
 }
 async function tryAutoReconnect() {
   if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
@@ -813,7 +852,6 @@ async function tryAutoReconnect() {
              || devs.find(d => (d.name || '') && activeProto.prefixes.some(p => d.name.startsWith(p)))
              || null;
     if (!dev) return;
-    userDisconnect = false;
     log('auto-reconnect: ' + (dev.name || dev.id));
     await connectGatt(dev);
   } catch (e) {

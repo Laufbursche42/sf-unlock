@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v6';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v7';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -664,7 +664,7 @@ function decodeRealtimeSo5(b) {
   if (b.length >= 22) { const trip = ((b[18] << 8) | b[19]) / 10, total = (b[20] << 8) | b[21]; parts.push('trip=' + trip.toFixed(1) + 'km', 'total=' + total + 'km'); }
   if (b.length >= 23) { parts.push('batt=' + b[22] + '%'); setTile('t-batt', b[22] + ' %'); }
   if (b.length >= 26) parts.push('dur=' + b[23] + 'h' + b[24] + 'm' + b[25] + 's');
-  if (b.length >= 27) parts.push('dark=' + (b[26] === 0 ? 'off' : 'on'));
+  if (b.length >= 27) parts.push('dark=' + (b[26] === 0 ? 'on' : 'off'));   // darkMode active when byte is 0
   log('  realtime: ' + parts.join(' '), 'log-ok');
 }
 
@@ -846,7 +846,7 @@ function modelCaps() {
 }
 function b01(on) { return on ? 0x01 : 0x00; }
 function cmdFrontLight(on) { transmit(buildFrameD7(0xA2, [b01(on)], 0x00), 'front light ' + (on ? 'on' : 'off') + ' 0xA2', 'op:' + 0xA2); }
-function cmdDarkMode(on)   { transmit(buildFrameD7(0xD6, [b01(on)], 0x00), 'dark mode ' + (on ? 'on' : 'off') + ' 0xD6', 'op:' + 0xD6); }
+function cmdDarkMode(on)   { transmit(buildFrameD7(0xD6, [on ? 0x00 : 0x01], 0x00), 'dark mode ' + (on ? 'on' : 'off') + ' 0xD6', 'op:' + 0xD6); }   // wire is inverted: dark mode on = 0x00
 function cmdZeroStart(on)  { transmit(buildFrameD7(0xA5, [b01(on)], 0x00), 'zero-start ' + (on ? 'on' : 'off') + ' 0xA5', 'op:' + 0xA5); }
 function cmdIndicator(on)  { transmit(buildFrameD7(0xA6, [b01(on)], 0x00), 'indicator light ' + (on ? 'on' : 'off') + ' 0xA6', 'op:' + 0xA6); }
 function cmdSetUnit(imperial) {
@@ -858,7 +858,7 @@ function cmdSetName(name) {
   if (!s) { log('name is empty.', 'log-err'); return; }
   const utf8 = Array.from(new TextEncoder().encode(s));
   if (activeProto.family === 'SO6') transmit(buildFrameSO6(0x04, 0x01, utf8), 'set name "' + s + '" {04,01}', 'so6:4:1');
-  else transmit(buildFrameD7(0xFF, [0x7F].concat(utf8), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);
+  else transmit(buildFrameD7(0xFF, utf8.concat([0x7F]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0x7F byte trails the UTF-8 name
 }
 
 // --------------------------- shortcut deep-link + auto-reconnect ---------------------------

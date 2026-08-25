@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<!-- frame-ancestors is ignored in a meta element by the browser, it only works as an HTTP header.
+     GitHub Pages sends no custom headers, so it is left out here. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-t="pageTitle">Laufbursche SoFlow Tool</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Laufbursche <span data-t="brandSub"></span></h1>
+    <div class="head-right">
+      <span class="status" id="status" data-state="disconnected">disconnected</span>
+      <div class="head-tools">
+        <button type="button" class="theme-btn" id="btn-theme">&#9728;</button>
+        <div class="langs" id="langs" role="group">
+          <button type="button" data-lang="de" aria-pressed="true">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2 data-t="s1Title"></h2>
+    <p class="hint" data-t="sub"></p>
+    <p class="hint" data-t="startHintGuide"></p>
+    <p class="warn" data-t="expWarn"></p>
+    <p class="hint" data-t="ownDevice"></p>
+  </div>
+
+  <div class="card">
+    <h2 data-t="s2Title"></h2>
+    <div class="set-row">
+      <label data-t="modelLabel"></label>
+      <select id="model-in"></select>
+    </div>
+    <p class="hint" data-t="modelHint"></p>
+    <p class="hint"><span data-t="encStatePrefix"></span> <b id="enc-state">-</b> <button type="button" class="help-btn" data-help="enc" aria-label="Info">?</button></p>
+    <div class="btns">
+      <button class="primary span2" id="btn-conn"></button>
+    </div>
+    <p class="hint" id="devinfo"></p>
+    <p class="hint" data-t="controlsHint"></p>
+  </div>
+
+  <div class="card">
+    <h2 data-t="liveTitle"></h2>
+    <div class="grid">
+      <div class="tile"><b id="t-speed">-</b><small data-t="tileSpeed"></small></div>
+      <div class="tile"><b id="t-mode">-</b><small data-t="tileMode"></small></div>
+      <div class="tile"><b id="t-batt">-</b><small data-t="tileBatt"></small></div>
+      <div class="tile"><b id="t-lock">-</b><small data-t="tileLock"></small></div>
+      <div class="tile"><b id="t-volt">-</b><small data-t="tileVolt"></small></div>
+      <div class="tile"><b id="t-fw">-</b><small data-t="tileFw"></small></div>
+    </div>
+    <p class="hint" data-t="liveHint"></p>
+  </div>
+
+  <div class="card" id="nospeed-card" hidden>
+    <h2 data-t="noSpeedTitle"></h2>
+    <p class="warn" data-t="noSpeedHint"></p>
+  </div>
+
+  <div class="card" id="speed-card">
+    <div class="card-head"><h2 data-t="s3Title"></h2><button type="button" class="help-btn" data-help="speed" aria-label="Info">?</button></div>
+    <div class="set-row">
+      <label data-t="lblSpeed"></label>
+      <input id="speed-in" type="number" step="1" min="1" max="99" value="25" disabled>
+      <button id="btn-set-speed" data-t="btnSetSpeed" disabled></button>
+    </div>
+    <div class="set-row">
+      <label data-t="lblMode"></label>
+      <select id="mode-in" disabled>
+        <option value="0" data-t="modeEco"></option>
+        <option value="1" data-t="modeNormal"></option>
+        <option value="2" data-t="modeSport"></option>
+      </select>
+      <button id="btn-set-mode" data-t="btnSetMode" disabled></button>
+    </div>
+    <p class="hint"><span data-t="framePrefix"></span> <code id="frame-preview">-</code></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 data-t="lockTitle"></h2><button type="button" class="help-btn" data-help="lock" aria-label="Info">?</button></div>
+    <div class="btns">
+      <button id="btn-unlock" data-t="btnUnlock" disabled></button>
+      <button id="btn-lock" data-t="btnLock" disabled></button>
+    </div>
+  </div>
+
+  <div class="card" id="bat-card">
+    <div class="card-head"><h2 data-t="batTitle"></h2><button type="button" class="help-btn" data-help="battery" aria-label="Info">?</button></div>
+    <div class="btns">
+      <button class="primary span2" id="btn-bat" data-t="btnBat" disabled></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 data-t="s5Title"></h2>
+    <p class="hint" data-t="shortcutIos"></p>
+    <div class="linkrow"><span class="lbl" data-t="scFast"></span><pre class="copy">bluefy://open?url=https%3A%2F%2Flaufbursche42.github.io%2Fsf-unlock%2F%3Fdo%3Dfast</pre></div>
+    <div class="linkrow"><span class="lbl" data-t="scSlow"></span><pre class="copy">bluefy://open?url=https%3A%2F%2Flaufbursche42.github.io%2Fsf-unlock%2F%3Fdo%3Dslow</pre></div>
+    <hr class="sep">
+    <p class="hint" data-t="shortcutAndroid"></p>
+    <div class="linkrow"><span class="lbl" data-t="scFast"></span><pre class="copy">https://laufbursche42.github.io/sf-unlock/?do=fast</pre></div>
+    <div class="linkrow"><span class="lbl" data-t="scSlow"></span><pre class="copy">https://laufbursche42.github.io/sf-unlock/?do=slow</pre></div>
+    <p class="hint" data-t="shortcutNote"></p>
+  </div>
+
+  <div class="card">
+    <h2 data-t="s6Title"></h2>
+    <div class="btns">
+      <button type="button" id="btn-copy-log" data-t="btnCopyLog"></button>
+      <button type="button" id="btn-clear-log" data-t="btnClearLog"></button>
+    </div>
+    <pre id="log"></pre>
+    <p class="hint"><span class="log-tx" data-t="logTxLegend"></span>, <span class="log-rx" data-t="logRxLegend"></span></p>
+  </div>
+
+  <footer class="foot">
+    <span class="foot-links">
+      <a id="link-guide" href="GUIDE.de.md" data-doc="GUIDE" data-t="footGuide"></a>
+      <a href="https://github.com/Laufbursche42/sf-unlock" target="_blank" rel="noopener" data-t="footSource"></a>
+      <a id="link-readme" href="README.md" data-doc="README" data-t="footReadme"></a>
+      <a id="link-disclaimer" href="#" data-t="footDisclaimer"></a>
+      <a id="link-license" href="LICENSE.de.md" data-doc="LICENSE" data-t="footLicense"></a>
+      <a id="link-privacy" href="PRIVACY.de.md" data-doc="PRIVACY" data-t="footPrivacy"></a>
+      <a id="link-trademarks" href="TRADEMARKS.de.md" data-doc="TRADEMARKS" data-t="footTrademarks"></a>
+    </span>
+    <span class="ver" id="build-ver"></span>
+  </footer>
+</div>
+
+<dialog id="doc" aria-labelledby="doc-title">
+  <div class="doc-head">
+    <h3 id="doc-title"></h3>
+    <button type="button" id="doc-x">&times;</button>
+  </div>
+  <div class="doc-body" id="doc-body"></div>
+  <div class="doc-foot">
+    <button type="button" id="doc-close" data-t="docClose"></button>
+  </div>
+</dialog>
+
+<dialog id="help" aria-labelledby="help-title">
+  <div class="doc-head">
+    <h3 id="help-title"></h3>
+    <button type="button" id="help-x">&times;</button>
+  </div>
+  <div class="doc-body"><p id="help-body"></p></div>
+  <div class="doc-foot">
+    <button type="button" id="help-close" data-t="docClose"></button>
+  </div>
+</dialog>
+
+<script src="i18n.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

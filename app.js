@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v8';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v9';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -153,7 +153,7 @@ function so3CalcSecret(b3, b15, b16) {
 const TRANSPORTS = {
   nordic:    { name: 'Nordic UART', service: '6e400001-b5a3-f393-e0a9-e50e24dcca9e', write: '6e400002-b5a3-f393-e0a9-e50e24dcca9e', notify: '6e400003-b5a3-f393-e0a9-e50e24dcca9e' },
   kingmeter: { name: 'KingMeter',   service: '43480001-f001-4b49-4e47-204d45544552', write: '43480002-f001-4b49-4e47-204d45544552', notify: '43480003-f001-4b49-4e47-204d45544552' },
-  so6:       { name: 'SO6 service', service: '60000001-0000-1000-8000-00805f9b34fb', write: '60000002-0000-1000-8000-00805f9b34fb', notify: '60000003-0000-1000-8000-00805f9b34fb' },
+  so6:       { name: 'SO6 service', service: '60000001-0000-1000-8000-00805f9b34fb', write: '60000003-0000-1000-8000-00805f9b34fb', notify: '60000002-0000-1000-8000-00805f9b34fb' },   // SO6 reverses write/notify vs Nordic/KingMeter
 };
 const ALL_SERVICES = [TRANSPORTS.nordic.service, TRANSPORTS.kingmeter.service, TRANSPORTS.so6.service];
 const TRANSPORT_ORDER = ['nordic', 'kingmeter', 'so6'];
@@ -492,7 +492,7 @@ function afterConnect() {
   } else if (activeProto.family === 'SO3') {
     transmit(buildFrameD7(0xA0, [0x00, 0x01], so3Secret), 'appStatus poll 0xA0');
   } else if (activeProto.family === 'SO6') {
-    transmit(buildFrameSO6(0x06, 0x01, []), 'updateToken {06,01}');
+    transmit(buildFrameSO6(0x06, 0x01, [0x01]), 'updateToken {06,01}');
     transmit(buildFrameSO6(0x05, 0x46, [0x01]), 'startMonitoringRealtime {05,46}');
   }
   maybeRunDeepAction();
@@ -687,14 +687,16 @@ function decodeSo3Realtime(b) {
   log('  SO3 0x1D: ' + parts.join(' '), 'log-ok');
 }
 
-// SO3 status frame 0x2D: versions (hi nibbles of b4/b5) plus trip / total distance.
+// SO3 status frame 0x2D: two firmware versions (each byte is major.minor over both nibbles) plus
+// trip / total distance.
 function decodeSo3Status2(b) {
   if (b.length < 10) { log('  SO3 0x2D: frame too short (' + b.length + ' bytes).'); return; }
-  const v1 = b[4] >> 4, v2 = b[5] >> 4;
+  const fw1 = (b[4] >> 4) + '.' + (b[4] & 0x0f);
+  const fw2 = (b[5] >> 4) + '.' + (b[5] & 0x0f);
   const trip = ((b[6] << 8) | b[7]) / 10;
   const total = (b[8] << 8) | b[9];
-  setTile('t-fw', v1 + '.' + v2);
-  log('  SO3 0x2D: versions ' + v1 + '/' + v2 + ' (hi nibbles, partial) trip=' + trip.toFixed(1) + 'km total=' + total + 'km', 'log-ok');
+  setTile('t-fw', fw1);
+  log('  SO3 0x2D: fw ' + fw1 + '/' + fw2 + ' trip=' + trip.toFixed(1) + 'km total=' + total + 'km', 'log-ok');
 }
 
 // SO6 family: decrypt first (if the model encrypts both ways), then read the command echo and, for a
@@ -719,9 +721,9 @@ function decodeRealtimeSo6(d) {
   if (d.length < 5) { log('  SO6 realtime: too short to decode.'); return; }
   const be = i => (d[i] << 8) | d[i + 1];
   const parts = ['voltage=' + (be(3) / 10).toFixed(1) + 'V (belegt)'];
-  if (d.length >= 7) parts.push('current=' + (be(5) / 100).toFixed(2) + 'A (belegt)');
-  if (d.length >= 9) parts.push('power=' + (be(7) / 100).toFixed(2) + 'W (belegt)');
-  if (d.length >= 11) parts.push('verSlot=' + be(9) + ' (unclear)');
+  if (d.length >= 7) parts.push('current=' + (be(5) / 10).toFixed(1) + 'A');
+  if (d.length >= 9) parts.push('power=' + (be(7) / 10).toFixed(1) + 'W');
+  if (d.length >= 11) parts.push('val4=' + (be(9) / 10).toFixed(1));
   if (d.length >= 14) parts.push('raw[11..13]=' + bytesToHex(d.subarray(11, 14)));
   log('  SO6 realtime (partial, voltage/current/power belegt): ' + parts.join(' '), 'log-ok');
   setTile('t-volt', (be(3) / 10).toFixed(1) + ' V');
@@ -814,7 +816,7 @@ function cmdUnlock() {
 }
 function cmdLock() {
   if (activeProto.family === 'SO6') {
-    transmit(buildFrameSO6(0x05, 0x0C, []), 'lock {05,0C}', 'so6:5:12');
+    transmit(buildFrameSO6(0x05, 0x0C, [0x01]), 'lock {05,0C}', 'so6:5:12');
   } else if (activeProto.family === 'SO3') {
     transmit(buildFrameD7(0xA2, [0x00, 0x01], so3Secret), 'lock 0xA2', 'op:' + 0xA2);
   } else {

@@ -57,8 +57,8 @@ page hides the controls a model does not support and shows a clear note instead.
 - **Set the maximum speed** (opcode 0xA9 on the SO4 style models). The value is `km/h * 10` as a
   big-endian 16-bit number, and the command itself carries no limit. Not available on SO6 and SO4 UL.
 - **Switch the ride mode** between eco, normal and sport.
-- **Lock and unlock the vehicle**. This is the anti-theft immobilizer (the app calls it
-  `LockVehicle` / `isLocked`), not the speed. The exact command depends on the model family.
+- **Lock and unlock the vehicle**. This is the anti-theft immobilizer, not the speed. The exact
+  command depends on the model family.
 - **Unlock the battery lock** (opcode 0xD5). Only the SO4 style (D7) models have this command.
 - **More per-model settings** where the model exposes them: headlight (0xA2), dark mode (0xD6),
   zero-start (0xA5), unit (0xA7, SO3 0xAB) and the Bluetooth name (0xFF, SO6 {04,01}) on the Pro and

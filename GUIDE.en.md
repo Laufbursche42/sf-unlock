@@ -45,32 +45,42 @@ shortcut can skip.
 
 ---
 
-## 4. Set the maximum speed
+## 4. Set and test the maximum speed
 
 Only on models with a BLE speed command (so not SO6 and not SO4 UL).
 
 1. Enter the value in km/h in the **Settings** card.
-2. Tap **Set**. The page builds command 0xA9 and sends it.
+2. Tap **Set**. The page sends the value to the scooter.
 
-The value goes out as km/h times ten as a 16-bit number. The command builder has no limit. Whether
-the controller actually rides a raised value or caps it on its own is the open question this test is
-meant to clarify.
+The page itself has no upper limit. Whether the controller actually rides a raised value or caps it
+on its own is the open question this test is meant to clarify.
+
+**How to test whether the scooter really rides the value:**
+
+1. Find a safe, open spot on private ground, no traffic. Helmet on.
+2. Ride at full throttle briefly and note the km/h at which the scooter caps. That is your baseline.
+3. Set a value slightly above it, for example 2 to 3 km/h more, and tap **Set**.
+4. Ride full throttle again and watch the **Speed** tile. Does it climb past the previous cap? Then
+   the controller accepts the value.
+5. Repeat in small steps. The value at which it stops going higher is the firmware's hard cap.
+6. A high number does not make the scooter faster than the motor and battery allow. It only shows
+   whether the controller accepts it.
+
+Report your result with the copied log (section 11): model, firmware, the value you set and the live
+speed you reached.
 
 ---
 
 ## 5. Set the ride mode
 
-Choose eco, normal or sport and tap **Set**. That switches the ride level (command 0xA3, on the SO3
-0xA4).
+Choose eco, normal or sport and tap **Set**. That switches the ride level.
 
 ---
 
 ## 6. Lock and unlock the vehicle
 
-This is the **anti-theft immobilizer** of the scooter, NOT the speed. In the app code it is called
-LockVehicle / isLocked. Unlock releases the scooter, lock immobilizes it. The exact command depends
-on the model (D7 models 0xA0, SO3 0xA2, SO6 family a two-byte command), the page picks it
-automatically.
+This is the **anti-theft immobilizer** of the scooter, NOT the speed. Unlock releases the scooter,
+lock immobilizes it. The exact command depends on the model, and the page picks it automatically.
 
 ---
 
@@ -116,9 +126,8 @@ models with a BLE speed command.
 
 ## 11. Test cleanly and report
 
-Test on your own device on private ground only. Before sending, check the frame preview in the speed
-card. The log at the bottom is a full transcript (model, firmware, every byte sent and received).
-**Copy log** gives you the whole transcript as text.
+Test on your own device on private ground only. The log at the bottom is a full transcript (model,
+firmware, every byte sent and received). **Copy log** gives you the whole transcript as text.
 
 Report problems or successes: by DM to
 [Laufbursche on escooter-stammtisch](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/)

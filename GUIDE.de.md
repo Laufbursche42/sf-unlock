@@ -47,32 +47,45 @@ Browsers, die keine Verknüpfung überspringen kann.
 
 ---
 
-## 4. Höchstgeschwindigkeit setzen
+## 4. Höchstgeschwindigkeit setzen und testen
 
 Nur bei Modellen mit BLE-Speed-Kommando (also nicht SO6 und nicht SO4 UL).
 
 1. Trage in der Karte **Einstellungen** den gewünschten Wert in km/h ein.
-2. Tippe auf **Setzen**. Die Seite baut das Kommando 0xA9 und sendet es.
+2. Tippe auf **Setzen**. Die Seite sendet den Wert an den Roller.
 
-Der Wert geht als km/h mal 10 als 16-Bit-Zahl raus. Im Kommandobau gibt es keine Grenze. Ob der
-Controller einen erhöhten Wert wirklich fährt oder selbst abriegelt, ist die offene Frage, die genau
-dieser Test klären soll.
+Die Seite kennt dabei keine Obergrenze. Ob der Controller einen erhöhten Wert wirklich fährt oder
+selbst abriegelt, ist die offene Frage, die genau dieser Test klären soll.
+
+**So testest du, ob der Roller den Wert wirklich fährt:**
+
+1. Such dir einen sicheren, freien Ort auf privatem Gelände, kein Verkehr. Helm auf.
+2. Fahr kurz Vollgas und merk dir, bei welcher km/h-Zahl der Roller abriegelt. Das ist dein
+   Ausgangswert.
+3. Setze einen Wert leicht darüber, zum Beispiel 2 bis 3 km/h mehr und tippe auf **Setzen**.
+4. Fahr wieder Vollgas und beobachte die Kachel **Geschwindigkeit**. Steigt sie über den vorherigen
+   Riegel? Dann nimmt der Controller den Wert an.
+5. Wiederhole das in kleinen Schritten. Ab welchem Wert es nicht mehr weiter geht, ist der harte
+   Deckel der Firmware.
+6. Ein hoher Zahlenwert macht den Roller nicht schneller, als Motor und Akku hergeben. Er zeigt nur,
+   ob der Controller ihn annimmt.
+
+Melde dein Ergebnis mit dem kopierten Log (Abschnitt 11): Modell, Firmware, gesetzter Wert und die
+erreichte Live-Geschwindigkeit.
 
 ---
 
 ## 5. Fahrmodus setzen
 
-Wähle eco, normal oder sport und tippe auf **Setzen**. Das schaltet die Fahrstufe (Kommando 0xA3,
-beim SO3 0xA4).
+Wähle eco, normal oder sport und tippe auf **Setzen**. Das schaltet die Fahrstufe.
 
 ---
 
 ## 6. Fahrzeug sperren und entsperren
 
 Das ist die **Wegfahrsperre beziehungsweise der Diebstahlschutz** des Rollers, NICHT die
-Geschwindigkeit. Im App-Code heißt es LockVehicle beziehungsweise isLocked. Entsperren gibt den
-Roller frei, Sperren stellt ihn ab. Der genaue Befehl hängt vom Modell ab (D7-Modelle 0xA0, SO3
-0xA2, SO6-Familie ein Zwei-Byte-Kommando), die Seite wählt ihn automatisch.
+Geschwindigkeit. Entsperren gibt den Roller frei, Sperren stellt ihn ab. Der genaue Befehl hängt vom
+Modell ab, die Seite wählt ihn automatisch.
 
 ---
 
@@ -118,9 +131,9 @@ Roller und setzt den Wert. Das geht nur bei Modellen mit BLE-Speed-Kommando.
 
 ## 11. Sauber testen und Ergebnis melden
 
-Teste ausschließlich am eigenen Gerät auf privatem Gelände. Bevor du sendest, prüfe die Frame-Vorschau
-in der Speed-Karte. Der Log unten ist ein vollständiger Mitschnitt (Modell, Firmware, jedes gesendete
-plus empfangene Byte). Mit **Log kopieren** bekommst du den ganzen Mitschnitt als Text.
+Teste ausschließlich am eigenen Gerät auf privatem Gelände. Der Log unten ist ein vollständiger
+Mitschnitt (Modell, Firmware, jedes gesendete plus empfangene Byte). Mit **Log kopieren** bekommst du
+den ganzen Mitschnitt als Text.
 
 Probleme oder Erfolge bitte melden: per DM an
 [Laufbursche im escooter-stammtisch](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/)

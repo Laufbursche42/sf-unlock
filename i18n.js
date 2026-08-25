@@ -59,6 +59,20 @@ window.I18N = {
 
     batTitle: "Akku entsperren",
     btnBat: "Akku entsperren (0xD5)",
+
+    moreTitle: "Weitere Einstellungen",
+    moreHint: "Zusätzliche Befehle, die die App am Scooter setzt. Welche erscheinen, hängt vom Modell ab: Scheinwerfer, Dunkelmodus, Zero-Start, Einheit und Name gibt es bei den Pro- und So5-Klasse-Modellen (SO5 Pro, SO2, SoOne, SO4 Pro/GT/Max), das Anzeigelicht bei allen D7-Modellen, die Einheit auch beim SO3 und der Name auch beim SO6. Alle Werte stammen aus dem App-Protokoll und sind am Fahrzeug noch nicht bestätigt.",
+    lblLight: "Scheinwerfer",
+    lblDark: "Dunkelmodus",
+    lblZero: "Zero-Start",
+    lblInd: "Anzeigelicht (Display)",
+    lblUnit: "Einheit",
+    lblName: "Bluetooth-Name",
+    optOn: "An",
+    optOff: "Aus",
+    optKm: "km/h (metrisch)",
+    optMi: "mph (imperial)",
+    btnSend: "Senden",
     batHint: "Akku-Schloss entsperren (Diebstahlschutz am herausnehmbaren Akku), nicht speed-bezogen. Nur die D7-Modelle haben diesen Befehl (0xD5), SO3 plus die SO6-Familie nicht.",
 
     encTitle: "Verschlüsselung",
@@ -156,6 +170,20 @@ window.I18N = {
 
     batTitle: "Battery unlock",
     btnBat: "Battery unlock (0xD5)",
+
+    moreTitle: "More settings",
+    moreHint: "Extra commands the app sets on the scooter. Which ones appear depends on the model: headlight, dark mode, zero-start, unit and name exist on the Pro and So5-class models (SO5 Pro, SO2, SoOne, SO4 Pro/GT/Max), the indicator light on all D7 models, the unit also on the SO3 and the name also on the SO6. All values come from the app protocol and are not yet confirmed on a vehicle.",
+    lblLight: "Headlight",
+    lblDark: "Dark mode",
+    lblZero: "Zero-start",
+    lblInd: "Indicator light (display)",
+    lblUnit: "Unit",
+    lblName: "Bluetooth name",
+    optOn: "On",
+    optOff: "Off",
+    optKm: "km/h (metric)",
+    optMi: "mph (imperial)",
+    btnSend: "Send",
     batHint: "Battery-lock release (anti-theft on the removable battery), not speed related. Only the D7 models have this command (0xD5), SO3 and the SO6 family do not.",
 
     encTitle: "Encryption",

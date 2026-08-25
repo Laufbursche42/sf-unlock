@@ -103,6 +103,40 @@
     </div>
   </div>
 
+  <div class="card" id="more-card" hidden>
+    <div class="card-head"><h2 data-t="moreTitle"></h2><button type="button" class="help-btn" data-help="more" aria-label="Info">?</button></div>
+    <div class="set-row" id="row-light" hidden>
+      <label data-t="lblLight"></label>
+      <select id="light-in"><option value="1" data-t="optOn"></option><option value="0" data-t="optOff"></option></select>
+      <button id="btn-light" data-t="btnSend" disabled></button>
+    </div>
+    <div class="set-row" id="row-dark" hidden>
+      <label data-t="lblDark"></label>
+      <select id="dark-in"><option value="1" data-t="optOn"></option><option value="0" data-t="optOff"></option></select>
+      <button id="btn-dark" data-t="btnSend" disabled></button>
+    </div>
+    <div class="set-row" id="row-zero" hidden>
+      <label data-t="lblZero"></label>
+      <select id="zero-in"><option value="1" data-t="optOn"></option><option value="0" data-t="optOff"></option></select>
+      <button id="btn-zero" data-t="btnSend" disabled></button>
+    </div>
+    <div class="set-row" id="row-ind" hidden>
+      <label data-t="lblInd"></label>
+      <select id="ind-in"><option value="1" data-t="optOn"></option><option value="0" data-t="optOff"></option></select>
+      <button id="btn-ind" data-t="btnSend" disabled></button>
+    </div>
+    <div class="set-row" id="row-unit" hidden>
+      <label data-t="lblUnit"></label>
+      <select id="unit-in"><option value="0" data-t="optKm"></option><option value="1" data-t="optMi"></option></select>
+      <button id="btn-unit" data-t="btnSend" disabled></button>
+    </div>
+    <div class="set-row" id="row-name" hidden>
+      <label data-t="lblName"></label>
+      <input id="name-in" type="text" maxlength="20" disabled>
+      <button id="btn-name" data-t="btnSend" disabled></button>
+    </div>
+  </div>
+
   <div class="card">
     <h2 data-t="s5Title"></h2>
     <p class="hint" data-t="shortcutIos"></p>
@@ -161,7 +195,7 @@
   </div>
 </dialog>
 
-<script src="i18n.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="i18n.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

@@ -60,6 +60,10 @@ page hides the controls a model does not support and shows a clear note instead.
 - **Lock and unlock the vehicle**. This is the anti-theft immobilizer (the app calls it
   `LockVehicle` / `isLocked`), not the speed. The exact command depends on the model family.
 - **Unlock the battery lock** (opcode 0xD5). Only the SO4 style (D7) models have this command.
+- **More per-model settings** where the model exposes them: headlight (0xA2), dark mode (0xD6),
+  zero-start (0xA5), unit (0xA7, SO3 0xAB) and the Bluetooth name (0xFF, SO6 {04,01}) on the Pro and
+  So5-class models, plus the display indicator light (0xA6) on all D7 models. The page shows only the
+  controls a model actually has.
 - **Read the telemetry** the scooter sends back (speed, battery, ride mode, firmware version and
   more, model dependent) and keep the raw notifications in an on-screen diagnostic log as plain hex.
 - **Home-screen shortcuts** for speed: one sets the throttle back to 22 km/h, the other restores the

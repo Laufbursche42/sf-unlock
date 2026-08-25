@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v3';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v4';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -269,7 +269,7 @@ function copyLogFallback(text) {
   } catch (e) { return false; }
 }
 // Help "?" icons: each card can show its explanation in a modal instead of a permanent paragraph.
-const HELP = { enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], lock: ['lockTitle', 'lockHint'], battery: ['batTitle', 'batHint'], disclaimer: ['footDisclaimer', 'disclaimerText'] };
+const HELP = { enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], lock: ['lockTitle', 'lockHint'], battery: ['batTitle', 'batHint'], more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'] };
 function openHelp(key) {
   const m = HELP[key]; if (!m) return;
   const dlg = $('help'); if (!dlg) return;
@@ -308,9 +308,11 @@ function setStatus(s) {
 function setControlsEnabled(on) {
   const speedOn = on && activeProto.speed;
   const batOn = on && activeProto.family === 'D7';
-  [['btn-set-speed', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['mode-in', speedOn],
-   ['btn-unlock', on], ['btn-lock', on], ['btn-bat', batOn]]
-    .forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
+  const list = [['btn-set-speed', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['mode-in', speedOn],
+   ['btn-unlock', on], ['btn-lock', on], ['btn-bat', batOn]];
+  ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
+   'btn-unit', 'unit-in', 'btn-name', 'name-in'].forEach(id => list.push([id, on]));
+  list.forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
 }
 
 // SO4 only: firmware >= 5.2 -> protocol V52 -> AES.
@@ -359,6 +361,12 @@ function applyModelUi() {
   const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !activeProto.speed;
   const batCard = $('bat-card'); if (batCard) batCard.hidden = activeProto.family !== 'D7';
   const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = activeProto.speed;
+  const caps = modelCaps();
+  const rows = { 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
+                 'row-ind': caps.indicator, 'row-unit': caps.unit, 'row-name': caps.name };
+  let anyMore = false;
+  Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
+  const moreCard = $('more-card'); if (moreCard) moreCard.hidden = !anyMore;
   const sel = $('model-in'); if (sel && sel.value !== activeProto.id) sel.value = activeProto.id;
   setControlsEnabled(connected);
   updateEncState();
@@ -815,6 +823,40 @@ function cmdBatteryUnlock() {
   transmit(buildFrameD7(0xD5, [val], 0x00), 'battery unlock 0xD5 [' + val + ']', 'op:' + 0xD5);
 }
 
+// Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
+// dark mode 0xD6, zero-start 0xA5, unit 0xA7 (SO3 0xAB), name 0xFF (SO6 {04,01}), indicator 0xA6.
+// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SoOne,
+// SO4 Pro/GT/Max); the indicator light is on all D7 models; unit also on SO3, name also on SO6.
+// modelCaps() decides which control a model shows.
+function modelCaps() {
+  const p = activeProto;
+  const so5 = (p.family === 'D7' && p.variant === 'so5base');
+  return {
+    indicator:  (p.family === 'D7'),
+    frontLight: so5,
+    darkMode:   so5,
+    zeroStart:  so5,
+    unit:       so5 || (p.family === 'SO3'),
+    name:       so5 || (p.family === 'SO6'),
+  };
+}
+function b01(on) { return on ? 0x01 : 0x00; }
+function cmdFrontLight(on) { transmit(buildFrameD7(0xA2, [b01(on)], 0x00), 'front light ' + (on ? 'on' : 'off') + ' 0xA2', 'op:' + 0xA2); }
+function cmdDarkMode(on)   { transmit(buildFrameD7(0xD6, [b01(on)], 0x00), 'dark mode ' + (on ? 'on' : 'off') + ' 0xD6', 'op:' + 0xD6); }
+function cmdZeroStart(on)  { transmit(buildFrameD7(0xA5, [b01(on)], 0x00), 'zero-start ' + (on ? 'on' : 'off') + ' 0xA5', 'op:' + 0xA5); }
+function cmdIndicator(on)  { transmit(buildFrameD7(0xA6, [b01(on)], 0x00), 'indicator light ' + (on ? 'on' : 'off') + ' 0xA6', 'op:' + 0xA6); }
+function cmdSetUnit(imperial) {
+  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, b01(imperial)], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);
+  else transmit(buildFrameD7(0xA7, [b01(imperial)], 0x00), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xA7', 'op:' + 0xA7);
+}
+function cmdSetName(name) {
+  const s = (name || '').trim().slice(0, 20);
+  if (!s) { log('name is empty.', 'log-err'); return; }
+  const utf8 = Array.from(new TextEncoder().encode(s));
+  if (activeProto.family === 'SO6') transmit(buildFrameSO6(0x04, 0x01, utf8), 'set name "' + s + '" {04,01}', 'so6:4:1');
+  else transmit(buildFrameD7(0xFF, [0x7F].concat(utf8), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);
+}
+
 // --------------------------- shortcut deep-link + auto-reconnect ---------------------------
 // A home-screen shortcut opens the page with ?do=slow or ?do=fast. On load the page reconnects
 // to the last granted scooter via getDevices() (no chooser), then runs the action once connected.
@@ -1071,6 +1113,12 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btn-unlock').addEventListener('click', cmdUnlock);
   $('btn-lock').addEventListener('click', cmdLock);
   $('btn-bat').addEventListener('click', cmdBatteryUnlock);
+  { const b = $('btn-light'); if (b) b.addEventListener('click', () => cmdFrontLight($('light-in').value === '1')); }
+  { const b = $('btn-dark');  if (b) b.addEventListener('click', () => cmdDarkMode($('dark-in').value === '1')); }
+  { const b = $('btn-zero');  if (b) b.addEventListener('click', () => cmdZeroStart($('zero-in').value === '1')); }
+  { const b = $('btn-ind');   if (b) b.addEventListener('click', () => cmdIndicator($('ind-in').value === '1')); }
+  { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
+  { const b = $('btn-name');  if (b) b.addEventListener('click', () => cmdSetName($('name-in').value)); }
   $('speed-in').addEventListener('input', updatePreview);
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }

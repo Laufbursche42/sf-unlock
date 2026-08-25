@@ -17,8 +17,8 @@ Fahrmodus schalten, Fahrzeug sperren, entsperren. Es gibt nichts zu installieren
 - **Android oder Desktop:** **Chrome** oder ein anderer Chromium-Browser. Web Bluetooth ist
   eingebaut, kein Extra-Browser nötig.
 
-**Ein SoFlow-Roller.** Unterstützt sind SO4, SO4 Pro, SO4 Pro GT, SO4 Pro Max, SO4 UL, SO2 Air2,
-SO2 Grover, SO2 Zero, SO3, SO5 Pro, SO6 sowie SoOne Lite, SoOne Plus, SoOne Pro. Nicht jedes Modell
+**Ein SoFlow-Roller.** Unterstützt sind SO4, SO4 UL, SO2 Air 2nd gen, SO2 Grover, SO2 Zero, SO3,
+SO5 Pro, SO6 sowie SO One, SO One+, SO One Pro. Nicht jedes Modell
 kann alles über Bluetooth. Wichtig: **SO6 und SO4 UL haben kein BLE-Speed-Kommando**, dort lässt
 sich die Geschwindigkeit über diese Seite nicht setzen.
 
@@ -91,7 +91,7 @@ Modell ab, die Seite wählt ihn automatisch.
 
 ## 7. Akku-Schloss entsperren
 
-Nur bei den D7-Modellen (SO4, SO4 Pro/GT/Max, SO2, SO5 Pro, SoOne). Das betrifft das Schloss am
+Nur bei den D7-Modellen (SO4, SO2, SO5 Pro, SO One). Das betrifft das Schloss am
 herausnehmbaren Akku (Diebstahlschutz), nicht die Geschwindigkeit. Bei SO3, SO6 und SO4 UL gibt es
 diesen Befehl nicht, die Karte erscheint dort gar nicht.
 
@@ -112,7 +112,7 @@ Modell und beim SO4 an der Firmware:
 
 - **SO4:** bis Firmware 5.1 Klartext, ab 5.2 AES-128-ECB. Die Version wird aus den Live-Daten
   gelesen.
-- **SO2, SO5 Pro, SoOne, SO4 Pro/GT/Max:** immer AES-128-ECB.
+- **SO2, SO5 Pro, SO One (Lite/Plus/Pro):** immer AES-128-ECB.
 - **SO6 und SO4 UL:** immer AES-128-ECB in beide Richtungen, mit einem anderen festen Schlüssel.
 - **SO3:** keine Verschlüsselung, dafür ein rollierendes Secret-Byte im Frame.
 

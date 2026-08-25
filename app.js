@@ -1,7 +1,7 @@
 // Laufbursche SoFlow Tool: a model-dynamic Web Bluetooth client for the SoFlow BLE protocols.
 // Copyright (c) 2026 Laufbursche (https://github.com/Laufbursche42)
 // The user picks a model; the page then uses the matching BLE protocol family:
-//   - D7 family (one-byte opcodes): SO4, SO5 Pro, SO2, SoOne, SO4 Pro/GT/Max.
+//   - D7 family (one-byte opcodes): SO4, SO5 Pro, SO2, SO One (Lite/Plus/Pro).
 //   - SO3 family: like D7 but byte 3 is a rolling secret and there is no encryption.
 //   - SO6 family (two-byte commands, whole frame AES): SO6, SO4 UL (no BLE speed command).
 //
@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v7';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v8';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -87,7 +87,7 @@ function aesEcbDecrypt(data, key) {
 }
 
 // The two static command keys, hard-coded in the app. They differ only in the first byte.
-const KEY_30 = '30572F52364B3F473050415811632D2B';   // D7 family (SO4 V52, SO5 Pro, SO2, SoOne, SO4 Pro*)
+const KEY_30 = '30572F52364B3F473050415811632D2B';   // D7 family (SO4 V52, SO5 Pro, SO2, SO One)
 const KEY_20 = '20572F52364B3F473050415811632D2B';   // SO6 family (SO6, SO4 UL), both directions
 
 // Self-tests: FIPS-197 block vector (encrypt + decrypt), the verified SO4 20 km/h frame vector for
@@ -171,24 +171,24 @@ const CRYPTO_NONE     = { mode: 'never',  key: null,   decryptIncoming: false };
 // --------------------------- model register ---------------------------
 // family: 'D7' | 'SO3' | 'SO6'. variant (D7 only): 'so4' | 'so5base' selects the battery-unlock byte
 // and the telemetry decoder. so6pin: SO6 unlock carries the 6-byte PIN payload (default 000000).
+// Model detection mirrors the app's VehicleType._fromName regexes 1:1 (belegt): the scan prefixes,
+// transport and crypto are exactly what the official app uses per model. There is no separate "SO4
+// Pro" in the app; those devices advertise as SO One Pro / SO One+ and are handled here accordingly.
 const PROTOCOLS = {
-  so4:       { id: 'so4',       name: 'SO4',         family: 'D7',  variant: 'so4',     prefixes: ['SFSO4', 'SFS4'],   transport: 'nordic',    crypto: CRYPTO_FW52,     speed: true },
-  so4ul:     { id: 'so4ul',     name: 'SO4 UL',      family: 'SO6', variant: null,      prefixes: ['SFSO4UL'],         transport: 'nordic',    crypto: CRYPTO_ALWAYS20, speed: false, so6pin: false },
-  so2air2:   { id: 'so2air2',   name: 'SO2 Air2',    family: 'D7',  variant: 'so5base', prefixes: ['SFS2K', 'SFS2K1', 'SFS2K7'], transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
-  so2grover: { id: 'so2grover', name: 'SO2 Grover',  family: 'D7',  variant: 'so5base', prefixes: ['SFS2M'],           transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so2zero:   { id: 'so2zero',   name: 'SO2 Zero',    family: 'D7',  variant: 'so5base', prefixes: ['SFS2Z'],           transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
-  so3:       { id: 'so3',       name: 'SO3',         family: 'SO3', variant: null,      prefixes: ['SFSO3', 'SFSC3', 'SFS3', 'QINGZ'], transport: 'nordic', crypto: CRYPTO_NONE, speed: true },
-  so5pro:    { id: 'so5pro',    name: 'SO5 Pro',     family: 'D7',  variant: 'so5base', prefixes: ['SFS5'],            transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so6:       { id: 'so6',       name: 'SO6',         family: 'SO6', variant: null,      prefixes: ['SFSO6'],           transport: 'so6',       crypto: CRYPTO_ALWAYS20, speed: false, so6pin: true },
-  soonelite: { id: 'soonelite', name: 'SoOne Lite',  family: 'D7',  variant: 'so5base', prefixes: ['SFSOL'],           transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  sooneplus: { id: 'sooneplus', name: 'SoOne Plus',  family: 'D7',  variant: 'so5base', prefixes: ['SFSOJ', 'SFS4J'],  transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  soonepro:  { id: 'soonepro',  name: 'SoOne Pro',   family: 'D7',  variant: 'so5base', prefixes: ['SFSOB'],           transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
-  so4pro:    { id: 'so4pro',    name: 'SO4 Pro',     family: 'D7',  variant: 'so5base', prefixes: ['SFSOP'],           transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so4progt:  { id: 'so4progt',  name: 'SO4 Pro GT',  family: 'D7',  variant: 'so5base', prefixes: ['SFSGT', 'SFSRE'],  transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so4promax: { id: 'so4promax', name: 'SO4 Pro Max', family: 'D7',  variant: 'so5base', prefixes: ['SFSMX', 'SFSLP'],  transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so4:       { id: 'so4',       name: 'SO4',             family: 'D7',  variant: 'so4',     prefixes: ['SFSO4', 'SFS4'],                                              transport: 'nordic',    crypto: CRYPTO_FW52,     speed: true },
+  so4ul:     { id: 'so4ul',     name: 'SO4 UL',          family: 'SO6', variant: null,      prefixes: ['SFSO4UL'],                                                    transport: 'nordic',    crypto: CRYPTO_ALWAYS20, speed: false, so6pin: false },
+  so2air2:   { id: 'so2air2',   name: 'SO2 Air 2nd gen', family: 'D7',  variant: 'so5base', prefixes: ['SFS2K', 'SFS2Z', 'SFS2K7'],                                   transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
+  so2grover: { id: 'so2grover', name: 'SO2 Grover',      family: 'D7',  variant: 'so5base', prefixes: ['SFS2K7'],                                                     transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so2zero:   { id: 'so2zero',   name: 'SO2 Zero',        family: 'D7',  variant: 'so5base', prefixes: ['SFS2M'],                                                      transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
+  so3:       { id: 'so3',       name: 'SO3',             family: 'SO3', variant: null,      prefixes: ['SFSO3', 'SFSC3', 'SFS3', 'QINGZ'],                            transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
+  so5pro:    { id: 'so5pro',    name: 'SO5 Pro',         family: 'D7',  variant: 'so5base', prefixes: ['SFS5'],                                                       transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so6:       { id: 'so6',       name: 'SO6',             family: 'SO6', variant: null,      prefixes: ['SFSO6'],                                                      transport: 'so6',       crypto: CRYPTO_ALWAYS20, speed: false, so6pin: true },
+  soone:     { id: 'soone',     name: 'SO One',          family: 'D7',  variant: 'so5base', prefixes: ['SFSOB'],                                                      transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  sooneplus: { id: 'sooneplus', name: 'SO One+',         family: 'D7',  variant: 'so5base', prefixes: ['SFSOJ', 'SFS4J', 'SFSOL', 'SFSLP', 'SFSMX', 'SFSPE', 'SFSPM'], transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  soonepro:  { id: 'soonepro',  name: 'SO One Pro',      family: 'D7',  variant: 'so5base', prefixes: ['SFSOP', 'SFSGT', 'SFSRE'],                                    transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
 };
 const PROTOCOL_ORDER = ['so4', 'so4ul', 'so2air2', 'so2grover', 'so2zero', 'so3', 'so5pro', 'so6',
-  'soonelite', 'sooneplus', 'soonepro', 'so4pro', 'so4progt', 'so4promax'];
+  'soone', 'sooneplus', 'soonepro'];
 const DEFAULT_MODEL = 'so4';
 
 const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed';
@@ -325,7 +325,7 @@ function protocolIsV52() { return fwMajor != null && (fwMajor > 5 || (fwMajor ==
 function encActive() {
   const c = activeProto.crypto;
   if (c.mode === 'never') return false;   // SO3 has no crypto at all
-  if (c.mode === 'always') return true;   // SO2 / SO5 Pro / SoOne / SO4 Pro and the SO6 family
+  if (c.mode === 'always') return true;   // SO2 / SO5 Pro / SO One and the SO6 family
   return protocolIsV52();                 // SO4: only from firmware 5.2
 }
 function encKey() { return activeProto.crypto.key ? hexToBytes(activeProto.crypto.key) : null; }
@@ -636,7 +636,7 @@ function decodeRealtimeSo4(b) {
       ' trip=' + trip.toFixed(1) + 'km total=' + total + 'km', 'log-ok');
 }
 
-// So5ProBase realtime (0x1D) for SO5 Pro, SO2, SoOne, SO4 Pro*. Longer frame: 4 error bytes, versions
+// So5ProBase realtime (0x1D) for SO5 Pro, SO2, SO One. Longer frame: 4 error bytes, versions
 // at 15/16/17, battery at 22, duration 23-25, darkMode 26. Fields are read with guards so a shorter
 // frame still yields the basic values.
 function decodeRealtimeSo5(b) {
@@ -829,8 +829,7 @@ function cmdBatteryUnlock() {
 
 // Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
 // dark mode 0xD6, zero-start 0xA5, unit 0xA7 (SO3 0xAB), name 0xFF (SO6 {04,01}), indicator 0xA6.
-// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SoOne,
-// SO4 Pro/GT/Max); the indicator light is on all D7 models; unit also on SO3, name also on SO6.
+// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light is on all D7 models; unit also on SO3, name also on SO6.
 // modelCaps() decides which control a model shows.
 function modelCaps() {
   const p = activeProto;

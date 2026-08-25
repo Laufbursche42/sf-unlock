@@ -15,8 +15,8 @@ the ride mode, lock and unlock the vehicle. There is nothing to install. You nee
   the Safari engine, which has no Web Bluetooth at all.
 - **Android or desktop:** **Chrome** or another Chromium browser. Web Bluetooth is built in.
 
-**A SoFlow scooter.** Supported are SO4, SO4 Pro, SO4 Pro GT, SO4 Pro Max, SO4 UL, SO2 Air2, SO2
-Grover, SO2 Zero, SO3, SO5 Pro, SO6 and SoOne Lite, SoOne Plus, SoOne Pro. Not every model can do
+**A SoFlow scooter.** Supported are SO4, SO4 UL, SO2 Air 2nd gen, SO2 Grover, SO2 Zero, SO3, SO5 Pro,
+SO6, SO One, SO One+ and SO One Pro. Not every model can do
 everything over Bluetooth. Most importantly, **SO6 and SO4 UL have no BLE speed command**, so the
 speed cannot be set through this page for those two.
 
@@ -86,7 +86,7 @@ lock immobilizes it. The exact command depends on the model, and the page picks 
 
 ## 7. Unlock the battery lock
 
-Only on the D7 models (SO4, SO4 Pro/GT/Max, SO2, SO5 Pro, SoOne). This is the lock on the removable
+Only on the D7 models (SO4, SO2, SO5 Pro, SO One). This is the lock on the removable
 battery (anti-theft), not the speed. SO3, SO6 and SO4 UL do not have this command, so the card does
 not appear there.
 
@@ -107,7 +107,7 @@ the SO4, its firmware:
 
 - **SO4:** plain text up to firmware 5.1, AES-128-ECB from 5.2. The version is read from the live
   data.
-- **SO2, SO5 Pro, SoOne, SO4 Pro/GT/Max:** always AES-128-ECB.
+- **SO2, SO5 Pro, SO One (Lite/Plus/Pro):** always AES-128-ECB.
 - **SO6 and SO4 UL:** always AES-128-ECB in both directions, with a different static key.
 - **SO3:** no encryption, but a rolling secret byte in the frame.
 

@@ -41,12 +41,12 @@ The BLE protocol differs per model family, so the first step is always the model
 then knows the scan name, the transport, the frame format, the encryption and the command set for
 that model. Supported models:
 
-- **SO4**, **SO4 Pro**, **SO4 Pro GT**, **SO4 Pro Max**, **SO4 UL**
-- **SO2 Air2**, **SO2 Grover**, **SO2 Zero**
+- **SO4**, **SO4 UL**
+- **SO2 Air 2nd gen**, **SO2 Grover**, **SO2 Zero**
 - **SO3**
 - **SO5 Pro**
 - **SO6**
-- **SoOne Lite**, **SoOne Plus**, **SoOne Pro**
+- **SO One**, **SO One+**, **SO One Pro**
 
 Not every model exposes every function over Bluetooth. Most importantly, **SO6 and SO4 UL have no
 BLE speed command at all**, so the maximum speed cannot be set from this page for those two. The
@@ -76,7 +76,7 @@ that choice would be wrong since the scheme is fixed per scooter:
 
 - **SO4:** plain text up to firmware 5.1, **AES-128-ECB** from firmware 5.2 (the version is read
   from the telemetry).
-- **SO2, SO5 Pro, SoOne, SO4 Pro / GT / Max:** always AES-128-ECB.
+- **SO2, SO5 Pro, the SO One family:** always AES-128-ECB.
 - **SO6 and SO4 UL:** always AES-128-ECB, in both directions, with a different static key.
 - **SO3:** no encryption at all, but a rolling secret byte in the frame.
 

@@ -58,8 +58,9 @@ Only on models with a BLE speed command (so not SO6 and not SO4 UL).
 1. Enter the value in km/h in the **Settings** card.
 2. Tap **Set**. The page sends the value to the scooter.
 
-The page itself has no upper limit. Whether the controller actually rides a raised value or caps it
-on its own is the open question this test is meant to clarify.
+The page itself has no upper limit. On a first tester's scooter the controller did ride a raised value
+(30 km/h set, 30 km/h reached). Whether the same holds for your model and firmware is what this test
+clarifies.
 
 **How to test whether the scooter really rides the value:**
 
@@ -72,7 +73,7 @@ on its own is the open question this test is meant to clarify.
 6. A high number does not make the scooter faster than the motor and battery allow. It only shows
    whether the controller accepts it.
 
-Report your result with the copied log (section 11): model, firmware, the value you set and the live
+Report your result with the copied log (section 12): model, firmware, the value you set and the live
 speed you reached.
 
 ---
@@ -100,7 +101,25 @@ connecting. SO1, SO2 Air (first gen), SO3, SO5, SO6 and SO4 UL do not have it.
 
 ---
 
-## 8. Read live values
+## 8. More settings
+
+Some models offer comfort toggles in the **More settings** card. Only the ones your model actually
+has show up:
+
+- **Headlight** on or off.
+- **Dark mode** of the display on or off.
+- **Zero-start** (start by kick first or straight from the throttle) on or off.
+- **Unit** switch between km/h and mph.
+- **Name** of the scooter (the name shown in the Bluetooth chooser).
+- **Indicator light** (the BLE status light), SO4 only.
+
+These are pure comfort settings and have nothing to do with speed. Headlight, dark mode, zero-start
+and name are on the So5-class models (SO2, SO5 Pro, SO One), the unit also on the SO3, the indicator
+light only on the SO4.
+
+---
+
+## 9. Read live values
 
 Once data arrives, the tiles fill in (ride mode, max speed, firmware) and the log shows the decoded
 values plus the raw bytes as hex. The notification format is only partly decoded for some models, so
@@ -108,7 +127,7 @@ a value may stay a dash. The raw data is always in the log.
 
 ---
 
-## 9. Encryption
+## 10. Encryption
 
 The page decides automatically whether to encrypt, there is no switch. It follows the model and, for
 the SO4, its firmware:
@@ -124,7 +143,7 @@ goes into the log.
 
 ---
 
-## 10. Shortcuts (speed)
+## 11. Shortcuts (speed)
 
 For daily use you can add home-screen shortcuts: one sets the speed to 22 km/h, the other to the last
 value you set. Opening it reconnects to the last scooter and sets the value. This works only on
@@ -132,7 +151,7 @@ models with a BLE speed command.
 
 ---
 
-## 11. Test cleanly and report
+## 12. Test cleanly and report
 
 Test on your own device on private ground only. The log at the bottom is a full transcript (model,
 firmware, every byte sent and received). **Copy log** gives you the whole transcript as text.
@@ -144,17 +163,18 @@ it is clear what was sent and received.
 
 ---
 
-## 12. Limits worth knowing
+## 13. Limits worth knowing
 
 - **SO6 and SO4 UL** have no BLE speed command. The speed cannot be set through this page for them.
-- Whether the controller rides a value above the factory limit is not confirmed. Everything here
-  comes from static analysis of the app, not from the vehicle.
+- That the controller rides a value above the factory limit is confirmed in the field on one model
+  (30 set, 30 ridden); confirmation on the other models is still open. The protocol itself comes from
+  static analysis of the app.
 - There is no firmware flashing and no LED control. The SoFlow app does not do firmware updates over
   Bluetooth.
 
 ---
 
-## 13. Legal
+## 14. Legal
 
 Raising the maximum speed lifts the factory limit. The type approval (ABE) is then void and riding on
 public roads is no longer allowed. Use it on your own vehicle and at your own risk only.

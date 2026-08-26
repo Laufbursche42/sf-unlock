@@ -1,16 +1,18 @@
 # Laufbursche SoFlow unlock
 
-A static web page that talks to SoFlow e-scooters over Web Bluetooth. You pick your model, and the
-page uses the matching BLE protocol for it. Depending on the model it sets the maximum speed,
-switches the ride mode, locks and unlocks the vehicle and unlocks the battery, straight from the
-browser. Nothing to install: no app store, no signing, no developer account. It runs in **Bluefy**
-on iOS and in **Chrome** on Android or desktop.
+A static web page that talks to SoFlow e-scooters over Web Bluetooth. Let the page auto-detect your
+scooter or pick the model yourself, and it uses the matching BLE protocol for it. Depending on the
+model it sets the maximum speed, switches the ride mode, locks and unlocks the vehicle and unlocks
+the battery, straight from the browser. Nothing to install: no app store, no signing, no developer
+account. It runs in **Bluefy** on iOS and in **Chrome** on Android or desktop.
 
 > **This is a feasibility study.** It exists to show what SoFlow's Bluetooth protocol makes
 > possible, not to be a finished product. The protocols were reconstructed from the official app
-> (com.soflowapp 3.8.5) and are documented byte for byte, but the real send test at the vehicle is
-> still open. Error-free operation is not promised and there is no warranty of any kind. Whatever
-> you do with it, you do at your own risk.
+> (com.soflowapp 3.8.5) and are documented byte for byte. A first field test confirmed it: on one
+> scooter a raised limit was actually ridden (30 km/h set, 30 km/h reached), so the controller does
+> not cap the value on its own. Confirmation across the other models is still open. Error-free
+> operation is not promised and there is no warranty of any kind. Whatever you do with it, you do at
+> your own risk.
 
 **Open the web app: [laufbursche42.github.io/sf-unlock](https://laufbursche42.github.io/sf-unlock/)**
 
@@ -35,39 +37,53 @@ Then open the printed address in a browser that supports Web Bluetooth.
 **Guide: [Deutsch](GUIDE.de.md) | [English](GUIDE.en.md)** covers everything step by step, from
 picking the model to the first send.
 
-## Pick your model first
+## Auto-detect or pick your model
 
-The BLE protocol differs per model family, so the first step is always the model dropdown. The page
-then knows the scan name, the transport, the frame format, the encryption and the command set for
-that model. Supported models:
+The BLE protocol differs per model, so the page needs to know which scooter it is talking to. The
+default dropdown option, **Auto detect**, does this like the official app: it scans all SoFlow
+scooters nearby (name prefix `SFS`) and classifies the one you pick by its advertised name, then
+selects the transport, frame format, encryption and command set. You can also pick your model by
+name from the list; even then the advertised name has the final say, so a wrong pick is corrected
+automatically.
 
-- **SO4**, **SO4 UL**
-- **SO2 Air 2nd gen**, **SO2 Grover**, **SO2 Zero**
-- **SO3**
-- **SO5 Pro**
+Every model the app knows is covered:
+
+- **SO1**, **SO2 Air**, **SO2 Air 2nd gen**, **SO2 Zero**, **SO2 Grover**, **SO2+ Grover**
+- **SO3**, **SO5**, **SO5 Pro**
+- **SO4**, **SO4 UL**, **SO myTIER**, **SO X**
+- **SO4 Pro GT**, **SO4 Pro Core2**, **SO4 Pro Max**
 - **SO6**
-- **SO One**, **SO One+**, **SO One Pro**
+- **SO One**, **SO One+**, **SO One Pro**, **SO One Lite**, **SO One Lite Pro**, **SO One Prime**,
+  **SO One Prime Max**
 
 Not every model exposes every function over Bluetooth. Most importantly, **SO6 and SO4 UL have no
-BLE speed command at all**, so the maximum speed cannot be set from this page for those two. The
-page hides the controls a model does not support and shows a clear note instead.
+BLE speed command at all** (and neither does an SO4 on old 4.x firmware), so the maximum speed cannot
+be set from this page there. The page hides the controls a model does not support and shows a clear
+note instead.
 
 ## What it does
 
+- **Auto-detect the scooter** by its advertised name, or pick the model by name, exactly like the
+  official app.
 - **Set the maximum speed** (opcode 0xA9 on the SO4 style models). The value is `km/h * 10` as a
-  big-endian 16-bit number, and the command itself carries no limit. Not available on SO6 and SO4 UL.
+  big-endian 16-bit number, and the command itself carries no limit. Not available on SO6, SO4 UL
+  and an SO4 on old 4.x firmware.
 - **Switch the ride mode** between eco, normal and sport.
 - **Lock and unlock the vehicle**. This is the anti-theft immobilizer, not the speed. The exact
-  command depends on the model family.
-- **Unlock the battery lock** (opcode 0xD5). Only the SO4 style (D7) models have this command.
+  command depends on the model.
+- **Unlock the battery lock** (opcode 0xD5). This frees the removable battery for removal, it is not
+  the speed. Only models that actually carry the command show the card: the So5-class models (SO2, SO5
+  Pro, the SO One family) always, the SO4 and SO myTIER from firmware 5.2, the SO X always. SO3-class
+  and SO6-class models do not have it.
 - **More per-model settings** where the model exposes them: headlight (0xA2), dark mode (0xD6),
-  zero-start (0xA5), unit (0xA7, SO3 0xAB) and the Bluetooth name (0xFF, SO6 {04,01}) on the Pro and
-  So5-class models, plus the display indicator light (0xA6) on all D7 models. The page shows only the
-  controls a model actually has.
+  zero-start (0xA5), unit (0xA7, SO3 0xAB) and the Bluetooth name (0xFF; SO6 sends {04,01} plus, for a
+  long name, {04,02}) on the So5-class models, plus the display indicator light (0xA6) on the SO4 path
+  only. The page shows only the controls a model actually has.
 - **Read the telemetry** the scooter sends back (speed, battery, ride mode, firmware version and
   more, model dependent) and keep the raw notifications in an on-screen diagnostic log as plain hex.
+  Each command also waits for the scooter's echo and logs whether it was acknowledged.
 - **Home-screen shortcuts** for speed: one sets the throttle back to 22 km/h, the other restores the
-  last value you set.
+  last value you set. On reload the page reconnects to the last scooter without the chooser.
 
 ## Encryption is automatic
 
@@ -109,9 +125,11 @@ scripts/                  - check-i18n.js and security-scan.py (run in CI and th
 
 ## How it works
 
-- The user picks a model. The `PROTOCOLS` table in `app.js` maps each model to a family (`D7`,
-  `SO3` or `SO6`), a transport (Nordic UART, KingMeter or the SO6 service), a crypto policy and an
-  opcode set.
+- The user picks a model or lets the page auto-detect it. `classifyByName` in `app.js` maps an
+  advertised device name to a protocol in the exact order of the app's `VehicleType._fromName`. The
+  `PROTOCOLS` table then maps each model to a family (`D7`, `SO3` or `SO6`), a transport (Nordic UART,
+  KingMeter or the SO6 service), a crypto policy and an opcode set. On the SO4 the command shapes and
+  encryption also follow the firmware version (V42/V51/V52).
 - Commands are built per family and written to the write characteristic. Notifications are decoded
   per family; the SO6 family decrypts them first.
 - Encryption is automatic per model. The two static AES keys live in `app.js`.

@@ -61,8 +61,9 @@ Nur bei Modellen mit BLE-Speed-Kommando (also nicht SO6 und nicht SO4 UL).
 1. Trage in der Karte **Einstellungen** den gewünschten Wert in km/h ein.
 2. Tippe auf **Setzen**. Die Seite sendet den Wert an den Roller.
 
-Die Seite kennt dabei keine Obergrenze. Ob der Controller einen erhöhten Wert wirklich fährt oder
-selbst abriegelt, ist die offene Frage, die genau dieser Test klären soll.
+Die Seite kennt dabei keine Obergrenze. Bei einem ersten Tester hat der Controller einen erhöhten
+Wert wirklich gefahren (30 km/h gesetzt, 30 km/h erreicht). Ob das bei deinem Modell mit deiner
+Firmware genauso ist, klärt genau dieser Test.
 
 **So testest du, ob der Roller den Wert wirklich fährt:**
 
@@ -77,7 +78,7 @@ selbst abriegelt, ist die offene Frage, die genau dieser Test klären soll.
 6. Ein hoher Zahlenwert macht den Roller nicht schneller, als Motor und Akku hergeben. Er zeigt nur,
    ob der Controller ihn annimmt.
 
-Melde dein Ergebnis mit dem kopierten Log (Abschnitt 11): Modell, Firmware, gesetzter Wert und die
+Melde dein Ergebnis mit dem kopierten Log (Abschnitt 12): Modell, Firmware, gesetzter Wert und die
 erreichte Live-Geschwindigkeit.
 
 ---
@@ -107,7 +108,25 @@ SO6 und SO4 UL gibt es den Befehl nicht.
 
 ---
 
-## 8. Live-Werte lesen
+## 8. Weitere Einstellungen
+
+Manche Modelle bieten in der Karte **Weitere Einstellungen** noch Komfort-Schalter. Es erscheinen nur
+die, die dein Modell wirklich kann:
+
+- **Scheinwerfer** an oder aus.
+- **Dark Mode** des Displays an oder aus.
+- **Zero-Start** (Anfahren erst per Kick oder direkt per Gas) an oder aus.
+- **Einheit** zwischen km/h und mph umschalten.
+- **Name** des Rollers ändern (der Name, der im Bluetooth-Dialog erscheint).
+- **Anzeigelicht** (das BLE-Statuslicht), nur beim SO4.
+
+Diese Schalter sind reine Komfort-Funktionen und haben nichts mit der Geschwindigkeit zu tun.
+Scheinwerfer, Dark Mode, Zero-Start sowie Name gibt es bei den So5-Klasse-Modellen (SO2, SO5 Pro, SO
+One), die Einheit zusätzlich beim SO3, das BLE-Anzeigelicht nur beim SO4.
+
+---
+
+## 9. Live-Werte lesen
 
 Sobald Daten ankommen, füllen sich die Kacheln (Fahrmodus, Max-Speed, Firmware) und der Log zeigt die
 dekodierten Werte plus die rohen Bytes als Hex. Das Notification-Format ist je Modell teils nur
@@ -115,7 +134,7 @@ teilweise entschlüsselt, deshalb bleibt manches ein Strich. Die rohen Daten ste
 
 ---
 
-## 9. Verschlüsselung
+## 10. Verschlüsselung
 
 Die Seite entscheidet automatisch, ob verschlüsselt wird, es gibt keinen Schalter. Das hängt am
 Modell und beim SO4 an der Firmware:
@@ -131,7 +150,7 @@ Laden und landet im Log.
 
 ---
 
-## 10. Verknüpfungen (Speed-Shortcuts)
+## 11. Verknüpfungen (Speed-Shortcuts)
 
 Für den Alltag kannst du dir Verknüpfungen anlegen: eine setzt die Geschwindigkeit auf 22 km/h, die
 andere auf den zuletzt gesetzten Wert. Beim Öffnen verbindet sich die Seite mit dem zuletzt genutzten
@@ -139,7 +158,7 @@ Roller und setzt den Wert. Das geht nur bei Modellen mit BLE-Speed-Kommando.
 
 ---
 
-## 11. Sauber testen und Ergebnis melden
+## 12. Sauber testen und Ergebnis melden
 
 Teste ausschließlich am eigenen Gerät auf privatem Gelände. Der Log unten ist ein vollständiger
 Mitschnitt (Modell, Firmware, jedes gesendete plus empfangene Byte). Mit **Log kopieren** bekommst du
@@ -152,18 +171,19 @@ dann sieht man genau, was gesendet plus empfangen wurde.
 
 ---
 
-## 12. Grenzen, die man kennen sollte
+## 13. Grenzen, die man kennen sollte
 
 - **SO6 und SO4 UL** kennen kein BLE-Speed-Kommando. Die Geschwindigkeit ist über diese Seite dort
   nicht setzbar.
-- Ob der Controller einen Wert oberhalb der Drossel wirklich fährt, ist nicht bestätigt. Alles hier
-  stammt aus der statischen Analyse der App, nicht aus dem Fahrzeug.
+- Dass der Controller einen Wert oberhalb der Drossel wirklich fährt, ist bei einem Modell im Feld
+  bestätigt (30 gesetzt, 30 gefahren). Für die übrigen Modelle steht der Test noch aus. Das Protokoll
+  selbst stammt aus der statischen Analyse der App.
 - Es gibt kein Firmware-Flashen und keine LED-Steuerung. Die SoFlow-App macht kein Firmware-Update
   über Bluetooth.
 
 ---
 
-## 13. Recht
+## 14. Recht
 
 Das Anheben der Höchstgeschwindigkeit hebt die Drossel auf. Die ABE erlischt damit und der Betrieb auf
 öffentlichen Wegen ist dann nicht erlaubt. Nutzung ausschließlich am eigenen Gerät und auf eigenes

@@ -92,9 +92,11 @@ lock immobilizes it. The exact command depends on the model, and the page picks 
 
 ## 7. Unlock the battery lock
 
-Only on the D7 models (SO4, SO2, SO5 Pro, SO One). This is the lock on the removable
-battery (anti-theft), not the speed. SO3, SO6 and SO4 UL do not have this command, so the card does
-not appear there.
+This releases the lock on the removable battery (anti-theft); it has nothing to do with speed. The
+card only appears for models that actually have the command: SO5 Pro, SO2 Air 2nd gen, SO2 Zero, SO2
+Grover, SO2+ Grover and every SO One variant. On the SO4, SO myTIER and SO X it exists only from
+firmware 5.2, so the card shows up there only once the page has detected that firmware after
+connecting. SO1, SO2 Air (first gen), SO3, SO5, SO6 and SO4 UL do not have it.
 
 ---
 

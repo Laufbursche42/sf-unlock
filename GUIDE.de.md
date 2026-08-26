@@ -98,9 +98,12 @@ Modell ab, die Seite wählt ihn automatisch.
 
 ## 7. Akku-Schloss entsperren
 
-Nur bei den D7-Modellen (SO4, SO2, SO5 Pro, SO One). Das betrifft das Schloss am
-herausnehmbaren Akku (Diebstahlschutz), nicht die Geschwindigkeit. Bei SO3, SO6 und SO4 UL gibt es
-diesen Befehl nicht, die Karte erscheint dort gar nicht.
+Der Befehl gibt das Schloss am herausnehmbaren Akku frei (Diebstahlschutz), er hat nichts mit der
+Geschwindigkeit zu tun. Die Karte erscheint nur bei Modellen, die den Befehl wirklich haben: SO5 Pro,
+SO2 Air 2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover sowie SO One in allen Varianten. Beim SO4, SO
+myTIER und SO X gibt es ihn erst ab Firmware 5.2, deshalb erscheint die Karte dort erst, wenn die
+Seite nach dem Verbinden diese Firmware erkannt hat. Bei SO1, SO2 Air (erste Generation), SO3, SO5,
+SO6 und SO4 UL gibt es den Befehl nicht.
 
 ---
 

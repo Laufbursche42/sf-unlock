@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v10';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v11';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -436,11 +436,19 @@ function speedSupported() {
   if (activeProto.variant === 'so4' && so4Ver() === 'v42') return false;
   return true;
 }
+// Battery unlock (0xD5) exists only on the So5ProBase models (always) and on the SO4 path from V52
+// (belegt: batteryUnlock lives on So5ProBaseDataDelegate and So4Protocol V52 only). SO3/SO6 never.
+function batterySupported() {
+  if (activeProto.family !== 'D7') return false;
+  if (activeProto.variant !== 'so4') return true;     // SO2 / SO5 Pro / SO One family: always
+  if (activeProto.so4ver === 'v52') return true;      // SO X: forced V52
+  return fwMajor != null && so4Ver() === 'v52';       // SO4 / SO myTIER: only once firmware confirms V52
+}
 function applyModelUi() {
   const on = modelChosen;
   const auto = autoDetect && !connected;   // 'auto' picked, no device classified yet -> hide model cards
   const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || auto || !speedSupported();
-  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || activeProto.family !== 'D7';
+  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || !batterySupported();
   const lockCard = $('lock-card'); if (lockCard) lockCard.hidden = !on || auto;
   const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
   const caps = (on && !auto) ? modelCaps() : {};

@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v11';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v12';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -978,13 +978,13 @@ function cmdBatteryUnlock() {
 
 // Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
 // dark mode 0xD6, zero-start 0xA5, unit 0xA7 (SO3 0xAB), name 0xFF (SO6 {04,01}), indicator 0xA6.
-// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light is on all D7 models; unit also on SO3, name also on SO6.
+// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light (setBleIndicatorLight) is on the SO4 path only; unit also on SO3, name also on SO6.
 // modelCaps() decides which control a model shows.
 function modelCaps() {
   const p = activeProto;
   const so5 = (p.family === 'D7' && p.variant === 'so5base');
   return {
-    indicator:  (p.family === 'D7'),
+    indicator:  (p.variant === 'so4'),   // setBleIndicatorLight exists only on the SO4 path (belegt)
     frontLight: so5,
     darkMode:   so5,
     zeroStart:  so5,

@@ -42,7 +42,7 @@ automatically.
 1. Open the page in Bluefy or Chrome.
 2. Turn the scooter on. Keep it a few meters next to the phone.
 3. Tap **Connect** and choose your scooter in the browser chooser. With auto detect every SoFlow
-   scooter shows up (the name starts with SFS); with a manual pick only your model's devices do.
+   scooter shows up (the name starts with SFS or QINGZ); with a manual pick only your model's devices do.
 4. Watch the status top right: `connecting`, then `linking`, then `connected`.
 
 The page then asks for the live data once and reads the firmware version from it, among other
@@ -95,9 +95,9 @@ lock immobilizes it. The exact command depends on the model, and the page picks 
 
 This releases the lock on the removable battery (anti-theft); it has nothing to do with speed. The
 card only appears for models that actually have the command: SO5 Pro, SO2 Air 2nd gen, SO2 Zero, SO2
-Grover, SO2+ Grover and every SO One variant. On the SO4, SO myTIER and SO X it exists only from
-firmware 5.2, so the card shows up there only once the page has detected that firmware after
-connecting. SO1, SO2 Air (first gen), SO3, SO5, SO6 and SO4 UL do not have it.
+Grover, SO2+ Grover and every SO One variant. On the SO4 and SO myTIER it exists only from firmware 5.2, so the card shows up there only once the
+page has detected that firmware after connecting. The SO X shows it right away, since it is locked to
+protocol V52. SO1, SO2 Air (first gen), SO3, SO5, SO6 and SO4 UL do not have it.
 
 ---
 
@@ -113,9 +113,9 @@ has show up:
 - **Name** of the scooter (the name shown in the Bluetooth chooser).
 - **Indicator light** (the BLE status light), SO4 only.
 
-These are pure comfort settings and have nothing to do with speed. Headlight, dark mode, zero-start
-and name are on the So5-class models (SO2, SO5 Pro, SO One), the unit also on the SO3, the indicator
-light only on the SO4.
+These are pure comfort settings and have nothing to do with speed. Headlight, dark mode and zero-start are on the So5-class models (SO2, SO5 Pro, SO One). The name can
+be set on those and on the SO6, the unit on those and on the SO3. The indicator light is only on the
+SO4 path (SO4, SO myTIER, SO X).
 
 ---
 
@@ -124,6 +124,10 @@ light only on the SO4.
 Once data arrives, the tiles fill in (ride mode, max speed, firmware) and the log shows the decoded
 values plus the raw bytes as hex. The notification format is only partly decoded for some models, so
 a value may stay a dash. The raw data is always in the log.
+
+Every command sent also waits for the scooter's echo; the log then shows `confirmed` or
+`no confirmation`. An echo only means the scooter accepted the command, not that it will ride the
+value.
 
 ---
 

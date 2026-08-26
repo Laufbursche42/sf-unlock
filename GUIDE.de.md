@@ -44,7 +44,7 @@ wird also automatisch korrigiert.
 1. Öffne die Seite in Bluefy oder Chrome.
 2. Schalte den Roller ein. Er muss ein paar Meter neben dem Handy bleiben.
 3. Tippe auf **Verbinden** und wähle deinen Roller in der Auswahl des Browsers. Bei automatischer
-   Erkennung erscheinen dort alle SoFlow-Roller (der Name beginnt mit SFS), bei manueller Wahl nur die
+   Erkennung erscheinen dort alle SoFlow-Roller (der Name beginnt mit SFS oder QINGZ), bei manueller Wahl nur die
    Geräte deines Modells.
 4. Beobachte die Statusanzeige oben rechts: erst `connecting`, dann `linking`, dann `connected`.
 
@@ -101,9 +101,9 @@ Modell ab, die Seite wählt ihn automatisch.
 
 Der Befehl gibt das Schloss am herausnehmbaren Akku frei (Diebstahlschutz), er hat nichts mit der
 Geschwindigkeit zu tun. Die Karte erscheint nur bei Modellen, die den Befehl wirklich haben: SO5 Pro,
-SO2 Air 2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover sowie SO One in allen Varianten. Beim SO4, SO
-myTIER und SO X gibt es ihn erst ab Firmware 5.2, deshalb erscheint die Karte dort erst, wenn die
-Seite nach dem Verbinden diese Firmware erkannt hat. Bei SO1, SO2 Air (erste Generation), SO3, SO5,
+SO2 Air 2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover sowie SO One in allen Varianten. Beim SO4 und SO myTIER gibt es ihn erst ab Firmware 5.2, deshalb erscheint die Karte dort erst, wenn
+die Seite nach dem Verbinden diese Firmware erkannt hat. Der SO X zeigt ihn sofort, weil er fest auf
+Protokoll V52 läuft. Bei SO1, SO2 Air (erste Generation), SO3, SO5,
 SO6 und SO4 UL gibt es den Befehl nicht.
 
 ---
@@ -121,8 +121,9 @@ die, die dein Modell wirklich kann:
 - **Anzeigelicht** (das BLE-Statuslicht), nur beim SO4.
 
 Diese Schalter sind reine Komfort-Funktionen und haben nichts mit der Geschwindigkeit zu tun.
-Scheinwerfer, Dark Mode, Zero-Start sowie Name gibt es bei den So5-Klasse-Modellen (SO2, SO5 Pro, SO
-One), die Einheit zusätzlich beim SO3, das BLE-Anzeigelicht nur beim SO4.
+Scheinwerfer, Dark Mode und Zero-Start gibt es bei den So5-Klasse-Modellen (SO2, SO5 Pro, SO One).
+Den Namen kann man bei diesen und beim SO6 setzen, die Einheit bei diesen und beim SO3. Das
+BLE-Anzeigelicht gibt es nur auf dem SO4-Pfad (SO4, SO myTIER, SO X).
 
 ---
 
@@ -131,6 +132,10 @@ One), die Einheit zusätzlich beim SO3, das BLE-Anzeigelicht nur beim SO4.
 Sobald Daten ankommen, füllen sich die Kacheln (Fahrmodus, Max-Speed, Firmware) und der Log zeigt die
 dekodierten Werte plus die rohen Bytes als Hex. Das Notification-Format ist je Modell teils nur
 teilweise entschlüsselt, deshalb bleibt manches ein Strich. Die rohen Daten stehen immer im Log.
+
+Jedes gesendete Kommando wartet zudem auf die Echo-Antwort des Rollers. Der Log zeigt dann
+`confirmed` oder `no confirmation`. Ein Echo heißt nur, dass der Roller den Befehl angenommen hat,
+nicht dass er den Wert auch fährt.
 
 ---
 

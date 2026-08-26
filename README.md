@@ -41,7 +41,7 @@ picking the model to the first send.
 
 The BLE protocol differs per model, so the page needs to know which scooter it is talking to. The
 default dropdown option, **Auto detect**, does this like the official app: it scans all SoFlow
-scooters nearby (name prefix `SFS`) and classifies the one you pick by its advertised name, then
+scooters nearby (name prefixes `SFS` and `QINGZ`) and classifies the one you pick by its advertised name, then
 selects the transport, frame format, encryption and command set. You can also pick your model by
 name from the list; even then the advertised name has the final say, so a wrong pick is corrected
 automatically.
@@ -83,7 +83,7 @@ note instead.
   more, model dependent) and keep the raw notifications in an on-screen diagnostic log as plain hex.
   Each command also waits for the scooter's echo and logs whether it was acknowledged.
 - **Home-screen shortcuts** for speed: one sets the throttle back to 22 km/h, the other restores the
-  last value you set. On reload the page reconnects to the last scooter without the chooser.
+  last value you set. Opened via such a shortcut, the page reconnects to the last scooter without the chooser.
 
 ## Encryption is automatic
 

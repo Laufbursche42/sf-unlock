@@ -15,19 +15,25 @@ the ride mode, lock and unlock the vehicle. There is nothing to install. You nee
   the Safari engine, which has no Web Bluetooth at all.
 - **Android or desktop:** **Chrome** or another Chromium browser. Web Bluetooth is built in.
 
-**A SoFlow scooter.** Supported are SO4, SO4 UL, SO2 Air 2nd gen, SO2 Grover, SO2 Zero, SO3, SO5 Pro,
-SO6, SO One, SO One+ and SO One Pro. Not every model can do
-everything over Bluetooth. Most importantly, **SO6 and SO4 UL have no BLE speed command**, so the
-speed cannot be set through this page for those two.
+**A SoFlow scooter.** Supported are all scooters the manufacturer app knows: SO1, SO2 Air, SO2 Air
+2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover, SO3, SO4, SO4 UL, SO4 Pro GT, SO4 Pro Core2, SO4 Pro Max,
+SO5, SO5 Pro, SO6, SO One, SO One+, SO One Pro, SO One Lite, SO One Lite Pro, SO One Prime, SO One
+Prime Max, SO myTIER and SO X. Not every model can do everything over Bluetooth. Most importantly,
+**SO6 and SO4 UL have no BLE speed command**, so the speed cannot be set through this page for those.
+An SO4 on old firmware (version 4.x) also has no speed command.
 
 ---
 
-## 2. Pick your model
+## 2. Auto detect or pick your model
 
-The first step is always the model dropdown at the top. The protocol differs per family, and the
-page needs the right choice to use the correct scan name, transport, frame format and encryption.
-Pick your model before you connect. The page then only shows the controls your model actually
-supports.
+The easiest option in the model dropdown at the top is **Auto detect**. The page then scans all
+SoFlow scooters nearby and sets the protocol, transport and encryption itself from the advertised
+device name, exactly like the manufacturer app. You do not need to know your model.
+
+If you prefer, pick your model straight from the list. Every marketing name is there, from SO4 to
+SO One Prime Max. The page then only shows the controls your model actually supports. Even with a
+manual pick the device name decides the protocol in the end, so a wrong choice is corrected
+automatically.
 
 ---
 
@@ -35,8 +41,8 @@ supports.
 
 1. Open the page in Bluefy or Chrome.
 2. Turn the scooter on. Keep it a few meters next to the phone.
-3. Tap **Connect** and choose your scooter in the browser chooser. Only devices whose name matches
-   the selected model show up in that list.
+3. Tap **Connect** and choose your scooter in the browser chooser. With auto detect every SoFlow
+   scooter shows up (the name starts with SFS); with a manual pick only your model's devices do.
 4. Watch the status top right: `connecting`, then `linking`, then `connected`.
 
 The page then asks for the live data once and reads the firmware version from it, among other

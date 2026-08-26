@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v9';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v10';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -169,33 +169,103 @@ const CRYPTO_ALWAYS20 = { mode: 'always', key: KEY_20, decryptIncoming: true };
 const CRYPTO_NONE     = { mode: 'never',  key: null,   decryptIncoming: false };
 
 // --------------------------- model register ---------------------------
-// family: 'D7' | 'SO3' | 'SO6'. variant (D7 only): 'so4' | 'so5base' selects the battery-unlock byte
-// and the telemetry decoder. so6pin: SO6 unlock carries the 6-byte PIN payload (default 000000).
-// Model detection mirrors the app's VehicleType._fromName regexes 1:1 (belegt): the scan prefixes,
-// transport and crypto are exactly what the official app uses per model. There is no separate "SO4
-// Pro" in the app; those devices advertise as SO One Pro / SO One+ and are handled here accordingly.
+// family: 'D7' | 'SO3' | 'SO6'. variant (D7 only): 'so4' | 'so5base'. so4ver forces a fixed SO4
+// command set ('v52' for the SO X, which always runs the newest protocol). so6pin: SO6 unlock carries
+// the 6-byte PIN payload (default 000000).
+// The scan prefixes, transport and crypto are exactly the app's VehicleType._fromName plus the
+// DataDelegate.of routing (belegt from the disassembly). Several marketing models share a data path:
+// SO1 / SO2 Air (1st gen) / SO5 run the SO3 path; SO myTIER runs the SO4 path; SO X runs the SO4 path
+// locked to protocol V52.
 const PROTOCOLS = {
-  so4:       { id: 'so4',       name: 'SO4',             family: 'D7',  variant: 'so4',     prefixes: ['SFSO4', 'SFS4'],                                              transport: 'nordic',    crypto: CRYPTO_FW52,     speed: true },
-  so4ul:     { id: 'so4ul',     name: 'SO4 UL',          family: 'SO6', variant: null,      prefixes: ['SFSO4UL'],                                                    transport: 'nordic',    crypto: CRYPTO_ALWAYS20, speed: false, so6pin: false },
-  so2air2:   { id: 'so2air2',   name: 'SO2 Air 2nd gen', family: 'D7',  variant: 'so5base', prefixes: ['SFS2K', 'SFS2Z', 'SFS2K7'],                                   transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
-  so2grover: { id: 'so2grover', name: 'SO2 Grover',      family: 'D7',  variant: 'so5base', prefixes: ['SFS2K7'],                                                     transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so2zero:   { id: 'so2zero',   name: 'SO2 Zero',        family: 'D7',  variant: 'so5base', prefixes: ['SFS2M'],                                                      transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
-  so3:       { id: 'so3',       name: 'SO3',             family: 'SO3', variant: null,      prefixes: ['SFSO3', 'SFSC3', 'SFS3', 'QINGZ'],                            transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
-  so5pro:    { id: 'so5pro',    name: 'SO5 Pro',         family: 'D7',  variant: 'so5base', prefixes: ['SFS5'],                                                       transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  so6:       { id: 'so6',       name: 'SO6',             family: 'SO6', variant: null,      prefixes: ['SFSO6'],                                                      transport: 'so6',       crypto: CRYPTO_ALWAYS20, speed: false, so6pin: true },
-  soone:     { id: 'soone',     name: 'SO One',          family: 'D7',  variant: 'so5base', prefixes: ['SFSOB'],                                                      transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  sooneplus: { id: 'sooneplus', name: 'SO One+',         family: 'D7',  variant: 'so5base', prefixes: ['SFSOJ', 'SFS4J', 'SFSOL', 'SFSLP', 'SFSMX', 'SFSPE', 'SFSPM'], transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
-  soonepro:  { id: 'soonepro',  name: 'SO One Pro',      family: 'D7',  variant: 'so5base', prefixes: ['SFSOP', 'SFSGT', 'SFSRE'],                                    transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
+  so4:           { name: 'SO4',             family: 'D7',  variant: 'so4',     prefixes: ['SFSO4', 'SFS4'],                                              transport: 'nordic',    crypto: CRYPTO_FW52,     speed: true },
+  somytier:      { name: 'SO myTIER',       family: 'D7',  variant: 'so4',     prefixes: ['SFSOMT'],                                                     transport: 'nordic',    crypto: CRYPTO_FW52,     speed: true },
+  sox:           { name: 'SO X',            family: 'D7',  variant: 'so4', so4ver: 'v52', prefixes: ['SFSOX'],                                          transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so4ul:         { name: 'SO4 UL',          family: 'SO6', variant: null,      prefixes: ['SFSO4UL'],                                                    transport: 'nordic',    crypto: CRYPTO_ALWAYS20, speed: false, so6pin: false },
+  so1:           { name: 'SO1',             family: 'SO3', variant: null,      prefixes: ['SFSO1', 'SFSC1', 'SFS1'],                                     transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
+  so2air:        { name: 'SO2 Air',         family: 'SO3', variant: null,      prefixes: ['SFSO2', 'SFSC2', 'SFS2A', 'SFS22'],                           transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
+  so2air2:       { name: 'SO2 Air 2nd gen', family: 'D7',  variant: 'so5base', prefixes: ['SFS2K', 'SFS2Z'],                                             transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
+  so2zero:       { name: 'SO2 Zero',        family: 'D7',  variant: 'so5base', prefixes: ['SFS2M'],                                                      transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
+  so2grover:     { name: 'SO2 Grover',      family: 'D7',  variant: 'so5base', prefixes: ['SFS2K7'],                                                     transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so2plusgrover: { name: 'SO2+ Grover',     family: 'D7',  variant: 'so5base', prefixes: ['SFS2K1'],                                                     transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so3:           { name: 'SO3',             family: 'SO3', variant: null,      prefixes: ['SFSO3', 'SFSC3', 'SFS3', 'QINGZ'],                            transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
+  so5:           { name: 'SO5',             family: 'SO3', variant: null,      prefixes: ['SFSO5', 'SFSC5'],                                             transport: 'nordic',    crypto: CRYPTO_NONE,     speed: true },
+  so5pro:        { name: 'SO5 Pro',         family: 'D7',  variant: 'so5base', prefixes: ['SFS5'],                                                       transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  so6:           { name: 'SO6',             family: 'SO6', variant: null,      prefixes: ['SFSO6'],                                                      transport: 'so6',       crypto: CRYPTO_ALWAYS20, speed: false, so6pin: true },
+  soone:         { name: 'SO One',          family: 'D7',  variant: 'so5base', prefixes: ['SFSOB'],                                                      transport: 'nordic',    crypto: CRYPTO_ALWAYS30, speed: true },
+  sooneplus:     { name: 'SO One+',         family: 'D7',  variant: 'so5base', prefixes: ['SFSOJ', 'SFS4J', 'SFSOL', 'SFSLP', 'SFSMX', 'SFSPE', 'SFSPM'], transport: 'nordic',  crypto: CRYPTO_ALWAYS30, speed: true },
+  soonepro:      { name: 'SO One Pro',      family: 'D7',  variant: 'so5base', prefixes: ['SFSOP', 'SFSGT', 'SFSRE'],                                    transport: 'kingmeter', crypto: CRYPTO_ALWAYS30, speed: true },
 };
-const PROTOCOL_ORDER = ['so4', 'so4ul', 'so2air2', 'so2grover', 'so2zero', 'so3', 'so5pro', 'so6',
-  'soone', 'sooneplus', 'soonepro'];
-const DEFAULT_MODEL = 'so4';
+// Branded sub-variants the user recognizes by name (from vehicle_image_utils.dart). They ride on a
+// parent protocol but scan for their own prefix so the user finds their exact model in the chooser.
+const BRANDED = {
+  so4progt:      { label: 'SO4 Pro GT',       proto: 'soonepro',  prefixes: ['SFSGT'] },
+  so4procore2:   { label: 'SO4 Pro Core2',    proto: 'soonepro',  prefixes: ['SFSRE'] },
+  so4promax:     { label: 'SO4 Pro Max',      proto: 'sooneplus', prefixes: ['SFSMX'] },
+  soonelite:     { label: 'SO One Lite',      proto: 'sooneplus', prefixes: ['SFSOL'] },
+  soonelitepro:  { label: 'SO One Lite Pro',  proto: 'sooneplus', prefixes: ['SFSLP'] },
+  sooneprime:    { label: 'SO One Prime',     proto: 'sooneplus', prefixes: ['SFSPE'] },
+  sooneprimemax: { label: 'SO One Prime Max', proto: 'sooneplus', prefixes: ['SFSPM'] },
+};
+// Dropdown display order. 'auto' first (recommended): scan broadly and classify by the advertised
+// name exactly like the app. Every marketing model the app knows is present.
+const MODEL_ORDER = [
+  'auto',
+  'so4', 'so4ul', 'so4progt', 'so4procore2', 'so4promax',
+  'soone', 'sooneplus', 'soonepro', 'soonelite', 'soonelitepro', 'sooneprime', 'sooneprimemax',
+  'so1', 'so2air', 'so2air2', 'so2zero', 'so2grover', 'so2plusgrover',
+  'so3', 'so5', 'so5pro', 'so6', 'somytier', 'sox',
+];
+// Resolve a dropdown key to a display definition. 'auto' has no protocol until a device is classified.
+function modelDef(key) {
+  if (key === 'auto') return { key: 'auto', label: '', proto: null };
+  if (BRANDED[key]) return { key, label: BRANDED[key].label, proto: BRANDED[key].proto, prefixes: BRANDED[key].prefixes };
+  const p = PROTOCOLS[key];
+  return p ? { key, label: p.name, proto: key, prefixes: p.prefixes } : null;
+}
+// Build a live activeProto object from a dropdown key (base protocol plus the key's own name/prefixes).
+function protoFor(key) {
+  const d = modelDef(key);
+  if (!d || !d.proto) return null;
+  const base = PROTOCOLS[d.proto];
+  return Object.assign({}, base, { id: key, baseId: d.proto, name: d.label, prefixes: d.prefixes || base.prefixes });
+}
+// Classify an advertised device name to a base protocol id, 1:1 with VehicleType._fromName (belegt,
+// vehicle_type.dart 0x7cb99c, in this exact check order). Returns null for a non-SoFlow name.
+function classifyByName(name) {
+  if (!name) return null;
+  const n = String(name);
+  if (/^(SFSO1|SFSC1|SFS1)/.test(n)) return 'so1';
+  if (/^SFS2K7/.test(n)) {                                   // serial weiche (belegt: substring(7), >=3000000 -> Grover)
+    const serial = parseInt(n.substring(7), 10);
+    return (Number.isFinite(serial) && serial >= 3000000) ? 'so2grover' : 'so2air2';
+  }
+  if (/^SFS2K1/.test(n)) return 'so2plusgrover';
+  if (/^(SFS2K|SFS2Z)/.test(n)) return 'so2air2';
+  if (/^(SFS2Z|SFS2M)/.test(n)) return 'so2zero';
+  if (/^(SFSO2|SFSC2|SFS2A|SFS22)/.test(n)) return 'so2air';
+  if (/^(SFSO3|SFSC3|SFS3|QINGZ)/.test(n)) return 'so3';
+  if (/^SFSOB/.test(n)) return 'soone';
+  if (/^(SFSOJ|SFS4J|SFSOL|SFSLP|SFSMX|SFSPE|SFSPM)/.test(n)) return 'sooneplus';
+  if (/^(SFSOP|SFSGT|SFSRE)/.test(n)) return 'soonepro';
+  if (/^SFSO4UL/.test(n)) return 'so4ul';
+  if (/^(SFSO4|SFS4)/.test(n)) return 'so4';
+  if (/^(SFSO5|SFSC5)/.test(n)) return 'so5';
+  if (/^SFS5/.test(n)) return 'so5pro';
+  if (/^SFSOMT/.test(n)) return 'somytier';
+  if (/^SFSOX/.test(n)) return 'sox';
+  if (/^SFSO6/.test(n)) return 'so6';
+  return null;
+}
+// Placeholder active protocol while 'auto' is selected but nothing is connected yet.
+const AUTO_PROTO = { id: 'auto', baseId: null, name: 'auto', family: null, variant: null, prefixes: [], transport: 'nordic', crypto: CRYPTO_NONE, speed: false };
+const DEFAULT_MODEL = 'auto';
 
 const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed';
 
 // --------------------------- state ---------------------------
 
-let activeProto = PROTOCOLS[DEFAULT_MODEL];
+let activeProto = AUTO_PROTO;
+let autoDetect = false;                                  // 'auto' selected: scan broadly, classify by name
 let usedTransport = TRANSPORTS[activeProto.transport];   // the transport actually found on connect
 let device = null, server = null, writeChar = null, notifyChar = null;
 let connected = false, connecting = false;
@@ -342,44 +412,71 @@ function buildModelDropdown() {
   const ph = document.createElement('option');
   ph.value = ''; ph.setAttribute('data-t', 'modelChoose'); ph.textContent = t('modelChoose');
   sel.appendChild(ph);
-  PROTOCOL_ORDER.forEach(id => {
-    const p = PROTOCOLS[id]; if (!p) return;
+  MODEL_ORDER.forEach(key => {
     const opt = document.createElement('option');
-    opt.value = id; opt.textContent = p.name;   // model names are brand identifiers, not translated
+    opt.value = key;
+    if (key === 'auto') { opt.setAttribute('data-t', 'modelAuto'); opt.textContent = t('modelAuto'); }
+    else { const d = modelDef(key); if (!d) return; opt.textContent = d.label; }   // brand names, not translated
     sel.appendChild(opt);
   });
 }
 // Show/hide and enable the per-model cards: the speed/mode card and battery card only for models
 // that support them, and a clear notice for models without a BLE speed command.
+// SO4 firmware -> command generation. Unknown firmware assumes the newest (V52). sox is forced V52.
+function so4Ver() {
+  if (activeProto.so4ver) return activeProto.so4ver;
+  if (fwMajor == null) return 'v52';
+  if (fwMajor <= 4) return 'v42';
+  if (fwMajor === 5 && fwMinor <= 1) return 'v51';
+  return 'v52';
+}
+// A model can set speed unless it is a no-speed family (SO6/SO4 UL) or an SO4 on old V42 firmware.
+function speedSupported() {
+  if (!activeProto.speed) return false;
+  if (activeProto.variant === 'so4' && so4Ver() === 'v42') return false;
+  return true;
+}
 function applyModelUi() {
   const on = modelChosen;
-  const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || !activeProto.speed;
-  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || activeProto.family !== 'D7';
-  const lockCard = $('lock-card'); if (lockCard) lockCard.hidden = !on;
-  const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || activeProto.speed;
-  const caps = on ? modelCaps() : {};
+  const auto = autoDetect && !connected;   // 'auto' picked, no device classified yet -> hide model cards
+  const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || auto || !speedSupported();
+  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || activeProto.family !== 'D7';
+  const lockCard = $('lock-card'); if (lockCard) lockCard.hidden = !on || auto;
+  const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
+  const caps = (on && !auto) ? modelCaps() : {};
   const rows = { 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
                  'row-ind': caps.indicator, 'row-unit': caps.unit, 'row-name': caps.name };
   let anyMore = false;
   Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
   const moreCard = $('more-card'); if (moreCard) moreCard.hidden = !anyMore;
-  const sel = $('model-in'); if (sel && on && sel.value !== activeProto.id) sel.value = activeProto.id;
+  const sel = $('model-in'); if (sel && on && !autoDetect && sel.value !== activeProto.id) sel.value = activeProto.id;
   const cb = $('btn-conn'); if (cb && !connected) cb.disabled = !on;
   setControlsEnabled(connected);
   updateEncState();
 }
 function setModel(id, quiet) {
-  const p = PROTOCOLS[id];
+  if (id === 'auto') {
+    if (connected) { log('model changed while connected -> disconnecting'); disconnectBle(); }
+    autoDetect = true; modelChosen = true; activeProto = AUTO_PROTO;
+    usedTransport = TRANSPORTS.nordic; so3Secret = 0; fwMajor = null; fwMinor = null;
+    resetTiles();
+    try { localStorage.setItem(LS_MODEL, 'auto'); } catch (e) {}
+    const sel = $('model-in'); if (sel) sel.value = 'auto';
+    applyModelUi();
+    if (!quiet) log('auto detect: the page scans all SoFlow scooters (name prefix SFS) and picks the protocol from the advertised name, exactly like the app.', 'log-ok');
+    return;
+  }
+  const p = protoFor(id);
   if (!p) {   // placeholder / no model chosen: show only the universal UI, disable connect
-    modelChosen = false;
+    autoDetect = false; modelChosen = false;
     if (connected) { log('model cleared while connected -> disconnecting'); disconnectBle(); }
     const sel = $('model-in'); if (sel) sel.value = '';
     applyModelUi();
-    if (!quiet) log('no model selected. Pick your model to see its controls.');
+    if (!quiet) log('no model selected. Pick your model or use auto detect.');
     return;
   }
   if (connected) { log('model changed while connected -> disconnecting to switch protocol'); disconnectBle(); }
-  modelChosen = true;
+  autoDetect = false; modelChosen = true;
   activeProto = p;
   usedTransport = TRANSPORTS[p.transport];
   so3Secret = 0;
@@ -390,8 +487,16 @@ function setModel(id, quiet) {
   if (!quiet) {
     log('model set: ' + p.name + '  [family ' + p.family + (p.variant ? '/' + p.variant : '') +
         ', transport ' + TRANSPORTS[p.transport].name + ', crypto ' + cryptoLabel(p) +
-        ', speed ' + (p.speed ? 'yes' : 'no') + ', scan ' + p.prefixes.join('/') + ']', 'log-ok');
+        ', speed ' + (speedSupported() ? 'yes' : 'no') + ', scan ' + p.prefixes.join('/') + ']', 'log-ok');
   }
+}
+// Apply a protocol detected from the advertised device name (auto detect, or a manual mismatch fix).
+function applyDetectedProto(detectedId, note) {
+  const p = protoFor(detectedId);
+  if (!p) return;
+  activeProto = p;
+  usedTransport = TRANSPORTS[p.transport];
+  if (note) log(note, 'log-ok');
 }
 
 // --------------------------- connect / disconnect ---------------------------
@@ -399,15 +504,25 @@ function setModel(id, quiet) {
 async function pickAndConnect() {
   if (!navigator.bluetooth) { log('Web Bluetooth not available. Use Bluefy (iOS) or Chrome/Edge.', 'log-err'); return; }
   try {
-    log('scanning for ' + activeProto.name + ' (' + activeProto.prefixes.join('/') + ') ...');
-    device = await navigator.bluetooth.requestDevice({
-      filters: activeProto.prefixes.map(p => ({ namePrefix: p })),
-      optionalServices: ALL_SERVICES,
-    });
+    let filters;
+    if (autoDetect) {
+      log('auto detect: scanning all SoFlow scooters (name prefix SFS / QINGZ) ...');
+      filters = [{ namePrefix: 'SFS' }, { namePrefix: 'QINGZ' }];
+    } else {
+      log('scanning for ' + activeProto.name + ' (' + activeProto.prefixes.join('/') + ') ...');
+      filters = activeProto.prefixes.map(p => ({ namePrefix: p }));
+    }
+    device = await navigator.bluetooth.requestDevice({ filters, optionalServices: ALL_SERVICES });
     log('selected: ' + (device.name || '(no name)') + ' [' + device.id + ']');
-    if (activeProto.variant === 'so4' && device.name && device.name.startsWith('SFSO4UL')) {
-      log('selected device is a SO4 UL (SO6 family), switching model automatically.', 'log-err');
-      setModel('so4ul', true);
+    // Classify by the advertised name, exactly like the app (VehicleType._fromName). The name is
+    // authoritative for crypto and frame family: in auto mode it picks the protocol; in manual mode it
+    // corrects a wrong pick so the tool still connects correctly instead of failing silently.
+    const detected = classifyByName(device.name);
+    if (autoDetect) {
+      if (detected) applyDetectedProto(detected, 'detected ' + PROTOCOLS[detected].name + ' from name "' + device.name + '"');
+      else { log('could not recognize "' + (device.name || '(no name)') + '" as a SoFlow model. Pick your model manually from the list and try again.', 'log-err'); return; }
+    } else if (detected && detected !== activeProto.baseId) {
+      applyDetectedProto(detected, 'note: this device advertises as ' + PROTOCOLS[detected].name + ', using that protocol instead of the picked one (the name is authoritative, like the app).');
     }
     await connectGatt(device);
   } catch (e) {
@@ -461,6 +576,7 @@ async function connectGatt(dev) {
     log('service ' + usedTransport.service, 'log-ok');
     log('char  write=' + writeChar.uuid + '  notify=' + notifyChar.uuid, 'log-ok');
     updateEncState();
+    applyModelUi();
     afterConnect();
   } catch (e) {
     setStatus('disconnected');
@@ -490,7 +606,7 @@ function afterConnect() {
     transmit(buildFrameD7(0xA6, [0x01], 0x00), 'init setBleIndicatorLight(true) 0xA6');
     transmit(buildFrameD7(0x1D, [], 0x00), 'realtime request 0x1D (nudge)');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA0, [0x00, 0x01], so3Secret), 'appStatus poll 0xA0');
+    transmit(buildFrameD7(0xA0, [0x00, 0x02], so3Secret), 'appStatus poll 0xA0 [00,02]');
   } else if (activeProto.family === 'SO6') {
     transmit(buildFrameSO6(0x06, 0x01, [0x01]), 'updateToken {06,01}');
     transmit(buildFrameSO6(0x05, 0x46, [0x01]), 'startMonitoringRealtime {05,46}');
@@ -584,13 +700,16 @@ function applyDetectedVersion(major, minor) {
     const aes = protocolIsV52();
     log('firmware ' + major + '.' + minor + ' -> protocol ' + proto + ' -> ' + (aes ? 'AES-128-ECB' : 'plaintext'), 'log-ok');
     updateEncState();
+    applyModelUi();   // V42 has no speed command -> refresh the speed / no-speed cards now
   }
   if (!initSent) {
     initSent = true;
     if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
     setStatus('connected');
-    // App connect command: So4DataDelegate.onConnected sends _setBleIndicatorLight(true) = 0xA6 [0x01].
-    transmit(buildFrameD7(0xA6, [0x01], 0x00), 'init setBleIndicatorLight(true) 0xA6');
+    // App connect command: So4DataDelegate.onConnected sends _setBleIndicatorLight(true), which each
+    // firmware builds differently (V52 = 0xA6 [01], V42 = via 0xA0, V51 = no builder).
+    if (so4Ver() === 'v52') transmit(buildFrameD7(0xA6, [0x01], 0x00), 'init setBleIndicatorLight(true) 0xA6');
+    else if (so4Ver() === 'v42') transmit(buildFrameD7(0xA0, [so4ModeByte0(1), 0x00], 0x00), 'init setBleIndicatorLight(true) 0xA0 (v42)');
     maybeRunDeepAction();
   }
 }
@@ -793,40 +912,60 @@ async function transmit(plain, label, ackKey) {
   }
 }
 
+// getSpeedCode is the identity on SO4 and So5ProBase (belegt: eco 0, normal 1, sport 2). On old SO4
+// firmware (V42/V51) the mode/lock/unlock/indicator payload packs (code<<1)|lowBit into byte 0; V52
+// uses clean single-purpose commands. currentMode tracks the last ride mode for that byte 0.
+let currentMode = 1;   // normal
+function so4ModeByte0(lowBit) { return (((currentMode & 0xff) << 1) | (lowBit & 1)) & 0xff; }
+
 function cmdSetMaxSpeed(kmh, persist) {
-  if (!activeProto.speed) { log('this model has no BLE speed command.', 'log-err'); return; }
+  if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }
   if (persist !== false) { try { localStorage.setItem(LS_SPEED, String(kmh)); } catch (e) {} }
   const b3 = (activeProto.family === 'SO3') ? so3Secret : 0x00;
   transmit(buildFrameD7(0xA9, speedPayload(kmh), b3), 'max speed ' + kmh + ' km/h 0xA9', 'op:' + 0xA9);
 }
 function cmdSetSpeedMode(mode) {
-  if (!activeProto.speed) { log('this model has no BLE speed command.', 'log-err'); return; }
-  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xA4, [0x00, mode & 0xff], so3Secret), 'ride mode ' + mode + ' 0xA4', 'op:' + 0xA4);
-  else transmit(buildFrameD7(0xA3, [mode & 0xff], 0x00), 'ride mode ' + mode + ' 0xA3', 'op:' + 0xA3);
+  if (!activeProto.speed) { log('this model has no BLE ride-mode command.', 'log-err'); return; }
+  currentMode = mode & 0xff;
+  if (activeProto.family === 'SO3') {
+    transmit(buildFrameD7(0xA4, [0x00, mode & 0xff], so3Secret), 'ride mode ' + mode + ' 0xA4', 'op:' + 0xA4);
+  } else if (activeProto.variant === 'so4' && so4Ver() !== 'v52') {
+    transmit(buildFrameD7(0xA0, [so4ModeByte0(1), 0x00], 0x00), 'ride mode ' + mode + ' 0xA0 (SO4 ' + so4Ver() + ')', 'op:' + 0xA0);
+  } else {
+    transmit(buildFrameD7(0xA3, [mode & 0xff], 0x00), 'ride mode ' + mode + ' 0xA3', 'op:' + 0xA3);
+  }
 }
 function cmdUnlock() {
   if (activeProto.family === 'SO6') {
     const pin = activeProto.so6pin ? [0x30, 0x30, 0x30, 0x30, 0x30, 0x30] : [];
     transmit(buildFrameSO6(0x05, 0x01, pin), 'unlock {05,01}' + (activeProto.so6pin ? ' PIN 000000' : ''), 'so6:5:1');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA2, [0x00, 0x00], so3Secret), 'unlock 0xA2', 'op:' + 0xA2);
+    transmit(buildFrameD7(0xA2, [0x00, 0x00], so3Secret), 'unlock 0xA2 [00,00]', 'op:' + 0xA2);
+  } else if (activeProto.variant === 'so4' && so4Ver() !== 'v52') {
+    transmit(buildFrameD7(0xA0, [so4ModeByte0(1), 0x00], 0x00), 'unlock 0xA0 (SO4 ' + so4Ver() + ')', 'op:' + 0xA0);
   } else {
-    transmit(buildFrameD7(0xA0, [0x00], 0x00), 'unlock 0xA0', 'op:' + 0xA0);
+    transmit(buildFrameD7(0xA0, [0x00], 0x00), 'unlock 0xA0 [00]', 'op:' + 0xA0);
   }
 }
 function cmdLock() {
   if (activeProto.family === 'SO6') {
     transmit(buildFrameSO6(0x05, 0x0C, [0x01]), 'lock {05,0C}', 'so6:5:12');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA2, [0x00, 0x01], so3Secret), 'lock 0xA2', 'op:' + 0xA2);
+    transmit(buildFrameD7(0xA2, [0x00, 0x02], so3Secret), 'lock 0xA2 [00,02]', 'op:' + 0xA2);   // belegt: SO3 lock = [00,02]
+  } else if (activeProto.variant === 'so4' && so4Ver() !== 'v52') {
+    transmit(buildFrameD7(0xA0, [so4ModeByte0(1), 0x01], 0x00), 'lock 0xA0 (SO4 ' + so4Ver() + ')', 'op:' + 0xA0);
   } else {
-    transmit(buildFrameD7(0xA0, [0x01], 0x00), 'lock 0xA0', 'op:' + 0xA0);
+    transmit(buildFrameD7(0xA0, [0x01], 0x00), 'lock 0xA0 [01]', 'op:' + 0xA0);
   }
 }
 function cmdBatteryUnlock() {
   if (activeProto.family !== 'D7') { log('this model has no battery-unlock command.', 'log-err'); return; }
-  const val = (activeProto.variant === 'so4') ? 0x01 : 0x00;   // SO4 uses 0x01, so5base uses 0x00
-  transmit(buildFrameD7(0xD5, [val], 0x00), 'battery unlock 0xD5 [' + val + ']', 'op:' + 0xD5);
+  if (activeProto.variant === 'so4') {
+    if (so4Ver() !== 'v52') { log('battery unlock is not supported on this SO4 firmware (only from V52).', 'log-err'); return; }
+    transmit(buildFrameD7(0xD5, [0x01], 0x00), 'battery unlock 0xD5 [01]', 'op:' + 0xD5);
+  } else {
+    transmit(buildFrameD7(0xD5, [0x00], 0x00), 'battery unlock 0xD5 [00]', 'op:' + 0xD5);   // so5base
+  }
 }
 
 // Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
@@ -849,17 +988,29 @@ function b01(on) { return on ? 0x01 : 0x00; }
 function cmdFrontLight(on) { transmit(buildFrameD7(0xA2, [b01(on)], 0x00), 'front light ' + (on ? 'on' : 'off') + ' 0xA2', 'op:' + 0xA2); }
 function cmdDarkMode(on)   { transmit(buildFrameD7(0xD6, [on ? 0x00 : 0x01], 0x00), 'dark mode ' + (on ? 'on' : 'off') + ' 0xD6', 'op:' + 0xD6); }   // wire is inverted: dark mode on = 0x00
 function cmdZeroStart(on)  { transmit(buildFrameD7(0xA5, [b01(on)], 0x00), 'zero-start ' + (on ? 'on' : 'off') + ' 0xA5', 'op:' + 0xA5); }
-function cmdIndicator(on)  { transmit(buildFrameD7(0xA6, [b01(on)], 0x00), 'indicator light ' + (on ? 'on' : 'off') + ' 0xA6', 'op:' + 0xA6); }
+function cmdIndicator(on)  {
+  if (activeProto.variant === 'so4' && so4Ver() === 'v42') { transmit(buildFrameD7(0xA0, [so4ModeByte0(b01(on)), 0x00], 0x00), 'indicator ' + (on ? 'on' : 'off') + ' 0xA0 (SO4 v42)', 'op:' + 0xA0); return; }
+  if (activeProto.variant === 'so4' && so4Ver() === 'v51') { log('indicator light is not supported on SO4 V51 firmware.', 'log-err'); return; }
+  transmit(buildFrameD7(0xA6, [b01(on)], 0x00), 'indicator light ' + (on ? 'on' : 'off') + ' 0xA6', 'op:' + 0xA6);
+}
 function cmdSetUnit(imperial) {
-  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, b01(imperial)], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);
+  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, imperial ? 0x02 : 0x00], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);   // belegt: imperial=[00,02], metric=[00,00]
   else transmit(buildFrameD7(0xA7, [b01(imperial)], 0x00), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xA7', 'op:' + 0xA7);
 }
-function cmdSetName(name) {
+async function cmdSetName(name) {
   const s = (name || '').trim().slice(0, 20);
   if (!s) { log('name is empty.', 'log-err'); return; }
   const utf8 = Array.from(new TextEncoder().encode(s));
-  if (activeProto.family === 'SO6') transmit(buildFrameSO6(0x04, 0x01, utf8), 'set name "' + s + '" {04,01}', 'so6:4:1');
-  else transmit(buildFrameD7(0xFF, utf8.concat([0x7F]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0x7F byte trails the UTF-8 name
+  if (activeProto.family === 'SO6') {
+    if (utf8.length < 9) {
+      transmit(buildFrameSO6(0x04, 0x01, utf8), 'set name "' + s + '" {04,01}', 'so6:4:1');
+    } else {   // belegt: >=9 bytes -> first 9 in {04,01}, remainder in {04,02} after write success
+      await transmit(buildFrameSO6(0x04, 0x01, utf8.slice(0, 9)), 'set name part 1 {04,01} (first 9 bytes)', 'so6:4:1');
+      transmit(buildFrameSO6(0x04, 0x02, utf8.slice(9)), 'set name part 2 {04,02} (remainder)', 'so6:4:2');
+    }
+  } else {
+    transmit(buildFrameD7(0xFF, utf8.concat([0x7F]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0x7F trails the name (D7 only)
+  }
 }
 
 // --------------------------- shortcut deep-link + auto-reconnect ---------------------------
@@ -895,10 +1046,19 @@ async function tryAutoReconnect() {
     const devs = await navigator.bluetooth.getDevices();
     if (!devs || !devs.length) return;
     const savedId = localStorage.getItem(LS_DEVICE);
-    const dev = (savedId && devs.find(d => d.id === savedId))
-             || devs.find(d => (d.name || '') && activeProto.prefixes.some(p => d.name.startsWith(p)))
-             || null;
+    let dev = (savedId && devs.find(d => d.id === savedId)) || null;
+    if (!dev && autoDetect) dev = devs.find(d => classifyByName(d.name)) || null;
+    if (!dev) dev = devs.find(d => (d.name || '') && activeProto.prefixes.some(p => d.name.startsWith(p))) || null;
     if (!dev) return;
+    // Classify by name like pickAndConnect, so the reconnect (auto mode, or a mismatched pick) uses the
+    // correct protocol instead of the placeholder.
+    const detected = classifyByName(dev.name);
+    if (autoDetect) {
+      if (detected) applyDetectedProto(detected, 'auto-reconnect detected ' + PROTOCOLS[detected].name + ' from "' + dev.name + '"');
+      else { log('auto-reconnect: could not recognize "' + (dev.name || '(no name)') + '". Pick your model manually.', 'log-err'); return; }
+    } else if (detected && detected !== activeProto.baseId) {
+      applyDetectedProto(detected, 'note: the reconnected device is a ' + PROTOCOLS[detected].name + ', using that protocol.');
+    }
     log('auto-reconnect: ' + (dev.name || dev.id));
     await connectGatt(dev);
   } catch (e) {
@@ -1094,10 +1254,12 @@ window.addEventListener('DOMContentLoaded', () => {
   wireDocViewer();
   buildModelDropdown();
 
-  // Restore the saved model (default SO4), then render the language and the per-model UI.
+  // Restore the saved model, then render the language and the per-model UI. Default is auto detect so a
+  // fresh visitor can just tap Connect and the page recognizes the scooter by its advertised name.
   let saved = null;
   try { saved = localStorage.getItem(LS_MODEL); } catch (e) {}
-  setModel(PROTOCOLS[saved] ? saved : '', true);
+  const validModel = (saved === 'auto') || !!PROTOCOLS[saved] || !!BRANDED[saved];
+  setModel(validModel ? saved : 'auto', true);
   applyLang();
 
   // The AES self-test result, in the log and under the encryption card.

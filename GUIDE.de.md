@@ -17,19 +17,25 @@ Fahrmodus schalten, Fahrzeug sperren, entsperren. Es gibt nichts zu installieren
 - **Android oder Desktop:** **Chrome** oder ein anderer Chromium-Browser. Web Bluetooth ist
   eingebaut, kein Extra-Browser nötig.
 
-**Ein SoFlow-Roller.** Unterstützt sind SO4, SO4 UL, SO2 Air 2nd gen, SO2 Grover, SO2 Zero, SO3,
-SO5 Pro, SO6 sowie SO One, SO One+, SO One Pro. Nicht jedes Modell
-kann alles über Bluetooth. Wichtig: **SO6 und SO4 UL haben kein BLE-Speed-Kommando**, dort lässt
-sich die Geschwindigkeit über diese Seite nicht setzen.
+**Ein SoFlow-Roller.** Unterstützt sind alle Roller, die auch die Hersteller-App kennt: SO1, SO2 Air,
+SO2 Air 2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover, SO3, SO4, SO4 UL, SO4 Pro GT, SO4 Pro Core2,
+SO4 Pro Max, SO5, SO5 Pro, SO6, SO One, SO One+, SO One Pro, SO One Lite, SO One Lite Pro, SO One
+Prime, SO One Prime Max, SO myTIER sowie SO X. Nicht jedes Modell kann alles über Bluetooth. Wichtig:
+**SO6 und SO4 UL haben kein BLE-Speed-Kommando**, dort lässt sich die Geschwindigkeit über diese Seite
+nicht setzen. Beim SO4 mit alter Firmware (Version 4.x) gibt es ebenfalls kein Speed-Kommando.
 
 ---
 
-## 2. Modell wählen
+## 2. Modell automatisch erkennen oder selbst wählen
 
-Der erste Schritt ist immer das Modell-Dropdown oben. Das Protokoll unterscheidet sich je Reihe und
-die Seite braucht die richtige Auswahl, um den passenden Scan-Namen, den Transport, das Frame-Format
-sowie die Verschlüsselung zu nutzen. Wähle dein Modell, bevor du verbindest. Die Seite blendet danach
-nur die Bedienelemente ein, die dein Modell wirklich kann.
+Am einfachsten steht im Modell-Dropdown oben die Auswahl **Automatisch erkennen**. Damit sucht die
+Seite alle SoFlow-Roller in der Nähe und stellt Protokoll, Transport sowie Verschlüsselung selbst
+anhand des Gerätenamens ein, genau wie die Hersteller-App. Du musst dein Modell also nicht kennen.
+
+Wer will, wählt sein Modell auch direkt aus der Liste. Jeder Marketing-Name ist dabei, von SO4 über
+SO One Pro bis SO4 Pro Core2. Die Seite blendet danach nur die Bedienelemente ein, die dein Modell
+wirklich kann. Auch bei manueller Wahl bestimmt am Ende der Gerätename das Protokoll, ein Fehlgriff
+wird also automatisch korrigiert.
 
 ---
 
@@ -37,8 +43,9 @@ nur die Bedienelemente ein, die dein Modell wirklich kann.
 
 1. Öffne die Seite in Bluefy oder Chrome.
 2. Schalte den Roller ein. Er muss ein paar Meter neben dem Handy bleiben.
-3. Tippe auf **Verbinden** und wähle deinen Roller in der Auswahl des Browsers. In dieser Liste
-   erscheinen nur Geräte, deren Name zum gewählten Modell passt.
+3. Tippe auf **Verbinden** und wähle deinen Roller in der Auswahl des Browsers. Bei automatischer
+   Erkennung erscheinen dort alle SoFlow-Roller (der Name beginnt mit SFS), bei manueller Wahl nur die
+   Geräte deines Modells.
 4. Beobachte die Statusanzeige oben rechts: erst `connecting`, dann `linking`, dann `connected`.
 
 Danach fragt die Seite einmal die Live-Daten ab und liest daraus unter anderem die Firmware-Version.

@@ -1,6 +1,6 @@
 # Anleitung: Laufbursche SoFlow unlock
 
-> **Machbarkeitsstudie.** Dieses Werkzeug zeigt, was das Bluetooth-Protokoll der SoFlow-Roller
+> **Machbarkeitsstudie.** Dieses Werkzeug zeigt, was das Bluetooth-Protokoll der SoFlow-E-Scooter
 > technisch hergibt. Es ist kein fertiges Produkt. Fehlerfreier Betrieb wird nicht versprochen, es
 > gibt keinerlei Gewährleistung. Was du hier tust, tust du auf eigenes Risiko und nur am eigenen
 > Fahrzeug.
@@ -17,7 +17,7 @@ Fahrmodus schalten, Fahrzeug sperren, entsperren. Es gibt nichts zu installieren
 - **Android oder Desktop:** **Chrome** oder ein anderer Chromium-Browser. Web Bluetooth ist
   eingebaut, kein Extra-Browser nötig.
 
-**Ein SoFlow-Roller.** Unterstützt sind alle Roller, die auch die Hersteller-App kennt: SO1, SO2 Air,
+**Ein SoFlow-E-Scooter.** Unterstützt sind alle E-Scooter, die auch die Hersteller-App kennt: SO1, SO2 Air,
 SO2 Air 2nd gen, SO2 Zero, SO2 Grover, SO2+ Grover, SO3, SO4, SO4 UL, SO4 Pro GT, SO4 Pro Core2,
 SO4 Pro Max, SO5, SO5 Pro, SO6, SO One, SO One+, SO One Pro, SO One Lite, SO One Lite Pro, SO One
 Prime, SO One Prime Max, SO myTIER sowie SO X. Nicht jedes Modell kann alles über Bluetooth. Wichtig:
@@ -29,7 +29,7 @@ nicht setzen. Beim SO4 mit alter Firmware (Version 4.x) gibt es ebenfalls kein S
 ## 2. Modell automatisch erkennen oder selbst wählen
 
 Am einfachsten steht im Modell-Dropdown oben die Auswahl **Automatisch erkennen**. Damit sucht die
-Seite alle SoFlow-Roller in der Nähe und stellt Protokoll, Transport sowie Verschlüsselung selbst
+Seite alle SoFlow-E-Scooter in der Nähe und stellt Protokoll, Transport sowie Verschlüsselung selbst
 anhand des Gerätenamens ein, genau wie die Hersteller-App. Du musst dein Modell also nicht kennen.
 
 Wer will, wählt sein Modell auch direkt aus der Liste. Jeder Marketing-Name ist dabei, von SO4 über
@@ -42,9 +42,9 @@ wird also automatisch korrigiert.
 ## 3. Verbinden
 
 1. Öffne die Seite in Bluefy oder Chrome.
-2. Schalte den Roller ein. Er muss ein paar Meter neben dem Handy bleiben.
-3. Tippe auf **Verbinden** und wähle deinen Roller in der Auswahl des Browsers. Bei automatischer
-   Erkennung erscheinen dort alle SoFlow-Roller (der Name beginnt mit SFS oder QINGZ), bei manueller Wahl nur die
+2. Schalte den E-Scooter ein. Er muss ein paar Meter neben dem Handy bleiben.
+3. Tippe auf **Verbinden** und wähle deinen E-Scooter in der Auswahl des Browsers. Bei automatischer
+   Erkennung erscheinen dort alle SoFlow-E-Scooter (der Name beginnt mit SFS oder QINGZ), bei manueller Wahl nur die
    Geräte deines Modells.
 4. Beobachte die Statusanzeige oben rechts: erst `connecting`, dann `linking`, dann `connected`.
 
@@ -59,23 +59,23 @@ Browsers, die keine Verknüpfung überspringen kann.
 Nur bei Modellen mit BLE-Speed-Kommando (also nicht SO6 und nicht SO4 UL).
 
 1. Trage in der Karte **Einstellungen** den gewünschten Wert in km/h ein.
-2. Tippe auf **Setzen**. Die Seite sendet den Wert an den Roller.
+2. Tippe auf **Setzen**. Die Seite sendet den Wert an den E-Scooter.
 
 Die Seite kennt dabei keine Obergrenze. Bei einem ersten Tester hat der Controller einen erhöhten
 Wert wirklich gefahren (30 km/h gesetzt, 30 km/h erreicht). Ob das bei deinem Modell mit deiner
 Firmware genauso ist, klärt genau dieser Test.
 
-**So testest du, ob der Roller den Wert wirklich fährt:**
+**So testest du, ob der E-Scooter den Wert wirklich fährt:**
 
 1. Such dir einen sicheren, freien Ort auf privatem Gelände, kein Verkehr. Helm auf.
-2. Fahr kurz Vollgas und merk dir, bei welcher km/h-Zahl der Roller abriegelt. Das ist dein
+2. Fahr kurz Vollgas und merk dir, bei welcher km/h-Zahl der E-Scooter abriegelt. Das ist dein
    Ausgangswert.
 3. Setze einen Wert leicht darüber, zum Beispiel 2 bis 3 km/h mehr und tippe auf **Setzen**.
 4. Fahr wieder Vollgas und beobachte die Kachel **Geschwindigkeit**. Steigt sie über den vorherigen
    Riegel? Dann nimmt der Controller den Wert an.
 5. Wiederhole das in kleinen Schritten. Ab welchem Wert es nicht mehr weiter geht, ist der harte
    Deckel der Firmware.
-6. Ein hoher Zahlenwert macht den Roller nicht schneller, als Motor und Akku hergeben. Er zeigt nur,
+6. Ein hoher Zahlenwert macht den E-Scooter nicht schneller, als Motor und Akku hergeben. Er zeigt nur,
    ob der Controller ihn annimmt.
 
 Melde dein Ergebnis mit dem kopierten Log (Abschnitt 12): Modell, Firmware, gesetzter Wert und die
@@ -91,8 +91,8 @@ Wähle eco, normal oder sport und tippe auf **Setzen**. Das schaltet die Fahrstu
 
 ## 6. Fahrzeug sperren und entsperren
 
-Das ist die **Wegfahrsperre beziehungsweise der Diebstahlschutz** des Rollers, NICHT die
-Geschwindigkeit. Entsperren gibt den Roller frei, Sperren stellt ihn ab. Der genaue Befehl hängt vom
+Das ist die **Wegfahrsperre beziehungsweise der Diebstahlschutz** des E-Scooters, NICHT die
+Geschwindigkeit. Entsperren gibt den E-Scooter frei, Sperren stellt ihn ab. Der genaue Befehl hängt vom
 Modell ab, die Seite wählt ihn automatisch.
 
 ---
@@ -117,7 +117,7 @@ die, die dein Modell wirklich kann:
 - **Dark Mode** des Displays an oder aus.
 - **Zero-Start** (Anfahren erst per Kick oder direkt per Gas) an oder aus.
 - **Einheit** zwischen km/h und mph umschalten.
-- **Name** des Rollers ändern (der Name, der im Bluetooth-Dialog erscheint).
+- **Name** des E-Scooters ändern (der Name, der im Bluetooth-Dialog erscheint).
 - **Anzeigelicht** (das BLE-Statuslicht), nur beim SO4.
 
 Diese Schalter sind reine Komfort-Funktionen und haben nichts mit der Geschwindigkeit zu tun.
@@ -133,8 +133,8 @@ Sobald Daten ankommen, füllen sich die Kacheln (Fahrmodus, Max-Speed, Firmware)
 dekodierten Werte plus die rohen Bytes als Hex. Das Notification-Format ist je Modell teils nur
 teilweise entschlüsselt, deshalb bleibt manches ein Strich. Die rohen Daten stehen immer im Log.
 
-Jedes gesendete Kommando wartet zudem auf die Echo-Antwort des Rollers. Der Log zeigt dann
-`confirmed` oder `no confirmation`. Ein Echo heißt nur, dass der Roller den Befehl angenommen hat,
+Jedes gesendete Kommando wartet zudem auf die Echo-Antwort des E-Scooters. Der Log zeigt dann
+`confirmed` oder `no confirmation`. Ein Echo heißt nur, dass der E-Scooter den Befehl angenommen hat,
 nicht dass er den Wert auch fährt.
 
 ---
@@ -159,7 +159,7 @@ Laden und landet im Log.
 
 Für den Alltag kannst du dir Verknüpfungen anlegen: eine setzt die Geschwindigkeit auf 22 km/h, die
 andere auf den zuletzt gesetzten Wert. Beim Öffnen verbindet sich die Seite mit dem zuletzt genutzten
-Roller und setzt den Wert. Das geht nur bei Modellen mit BLE-Speed-Kommando.
+E-Scooter und setzt den Wert. Das geht nur bei Modellen mit BLE-Speed-Kommando.
 
 ---
 

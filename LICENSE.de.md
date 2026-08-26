@@ -6,13 +6,13 @@ Copyright (c) 2026 Laufbursche (https://github.com/Laufbursche42)
 
 Die Software steht unter der PolyForm Noncommercial License 1.0.0, zusammen mit den Zusatzbedingungen weiter unten, an die sich jeder Lizenznehmer ebenfalls halten muss.
 
-Der Quellcode ist offen, damit jeder vorher nachlesen kann, was diese Seite mit einem Roller macht. Für kommerzielle Nutzung ist er nicht frei.
+Der Quellcode ist offen, damit jeder vorher nachlesen kann, was diese Seite mit einem E-Scooter macht. Für kommerzielle Nutzung ist er nicht frei.
 
 ## Zusatzbedingungen
 
 Diese Bedingungen legt der Autor als Rechteinhaber über die Grundlizenz.
 
-1. **Was diese Lizenz abdeckt und was nicht.** Sie deckt den Code in diesem Repository ab, also die Seite, den Bluetooth-Kern und die Dokumentation. Sie deckt die Firmware oder App des Roller-Herstellers **nicht** ab. Diese sind urheberrechtlich geschütztes Werk des Herstellers. Sie werden hier nicht verbreitet und diese Lizenz gibt dir keinerlei Recht daran.
+1. **Was diese Lizenz abdeckt und was nicht.** Sie deckt den Code in diesem Repository ab, also die Seite, den Bluetooth-Kern und die Dokumentation. Sie deckt die Firmware oder App des E-Scooter-Herstellers **nicht** ab. Diese sind urheberrechtlich geschütztes Werk des Herstellers. Sie werden hier nicht verbreitet und diese Lizenz gibt dir keinerlei Recht daran.
 
 2. **Keine Gewähr für das, was du damit tust.** Das Verändern der Höchstgeschwindigkeit kann ein Fahrzeug außerhalb des Zustands bringen, in dem es genehmigt wurde. Wer einen solchen Wert setzt, trägt dafür die Verantwortung, nicht der Autor dieses Werkzeugs.
 

@@ -24,7 +24,7 @@ window.I18N = {
     modelLabel: "Modell",
     modelChoose: "Modell wählen",
     modelAuto: "Automatisch erkennen (empfohlen)",
-    modelHint: "Am einfachsten lässt du dein Modell automatisch erkennen. Die Seite sucht dann alle SoFlow-Roller und stellt das Protokoll anhand des Gerätenamens ein, genau wie die Hersteller-App. Alternativ wählst du dein Modell selbst aus der Liste.",
+    modelHint: "Am einfachsten lässt du dein Modell automatisch erkennen. Die Seite sucht dann alle SoFlow-E-Scooter und stellt das Protokoll anhand des Gerätenamens ein, genau wie die Hersteller-App. Alternativ wählst du dein Modell selbst aus der Liste.",
     btnConnect: "Verbinden",
     btnDisconnect: "Trennen",
     controlsHint: "Verbinde dich mit dem Scooter. Auf dem iPhone geht Web Bluetooth nur über die App Bluefy, auf Android oder Desktop über Chrome oder Edge.",

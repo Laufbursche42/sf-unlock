@@ -48,6 +48,13 @@ wird also automatisch korrigiert.
    Geräte deines Modells.
 4. Beobachte die Statusanzeige oben rechts: erst `connecting`, dann `linking`, dann `connected`.
 
+**Android: Standort muss an sein.** Chrome scannt auf Android nur nach Bluetooth, wenn die
+Standortdienste (GPS) eingeschaltet sind und Chrome die Berechtigung Standort beziehungsweise Geräte
+in der Nähe hat. Sonst bleibt die Geräteliste komplett leer, obwohl der E-Scooter direkt daneben
+steht. Schließe außerdem die SoFlow-App vorher ganz (aus dem App-Wechsler wischen), sonst hält sie die
+Verbindung und der E-Scooter sendet kein Signal mehr, das der Browser sehen kann. Im Zweifel den
+E-Scooter kurz aus- und wieder einschalten, direkt bevor du scannst.
+
 Danach fragt die Seite einmal die Live-Daten ab und liest daraus unter anderem die Firmware-Version.
 Das allererste Verbinden braucht immer die Auswahl des Browsers. Das ist eine Sicherheitsregel des
 Browsers, die keine Verknüpfung überspringen kann.

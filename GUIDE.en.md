@@ -45,6 +45,12 @@ automatically.
    scooter shows up (the name starts with SFS or QINGZ); with a manual pick only your model's devices do.
 4. Watch the status top right: `connecting`, then `linking`, then `connected`.
 
+**Android: Location must be on.** On Android, Chrome only scans for Bluetooth when Location services
+(GPS) are on and Chrome has the Location or Nearby-devices permission. Otherwise the device list stays
+completely empty even though the scooter is right there. Also close the SoFlow app fully first (swipe
+it away), otherwise it holds the connection and the scooter no longer advertises for the browser to
+see. If in doubt, power the scooter off and on again right before you scan.
+
 The page then asks for the live data once and reads the firmware version from it, among other
 things. The very first connect always needs the browser chooser. That is a browser security rule no
 shortcut can skip.

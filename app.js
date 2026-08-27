@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v16';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v17';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -535,6 +535,46 @@ async function pickAndConnect() {
     await connectGatt(device);
   } catch (e) {
     log('scan/connect cancelled: ' + e, 'log-err');
+  }
+}
+
+// Diagnostics: show ALL Bluetooth devices (accept all), so a scooter that does not advertise an
+// "SFS" name still appears. Logs the real name, classifies it, connects and lists the GATT services.
+// This is how we find out why a specific unit (e.g. a newer GT2/Core2) does not connect normally.
+function charProps(c) {
+  const p = c.properties || {};
+  return ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => p[k]).join(',') || '-';
+}
+async function scanAllDevicesDiagnostic() {
+  if (!navigator.bluetooth) { log('Web Bluetooth not available. Use Bluefy (iOS) or Chrome (Android/desktop).', 'log-err'); return; }
+  let dev = null;
+  try {
+    log('DIAG: showing ALL Bluetooth devices. Pick your scooter, even if the name looks wrong or missing.', 'log-ok');
+    dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ALL_SERVICES });
+  } catch (e) { log('DIAG cancelled: ' + e, 'log-err'); return; }
+  log('DIAG selected: name="' + (dev.name || '(no name)') + '"  id=' + dev.id);
+  const cls = classifyByName(dev.name);
+  log('DIAG classify: ' + (cls ? PROTOCOLS[cls].name + ' (' + cls + ', transport ' + PROTOCOLS[cls].transport + ')'
+      : 'NOT recognized - the advertised name matches no known SFS/QINGZ prefix'), cls ? 'log-ok' : 'log-err');
+  try {
+    log('DIAG: connecting to read the GATT services ...');
+    const srv = await dev.gatt.connect();
+    let svcs = [];
+    try { svcs = await srv.getPrimaryServices(); } catch (e) { log('DIAG getPrimaryServices error: ' + e, 'log-err'); }
+    if (!svcs || !svcs.length) {
+      log('DIAG: none of the known services is present (Nordic 6E40.., KingMeter 4348.., SO6 6000..). This unit uses a service this tool does not know yet.', 'log-err');
+    } else {
+      for (const s of svcs) {
+        log('DIAG service ' + s.uuid, 'log-ok');
+        try { const chs = await s.getCharacteristics(); for (const c of chs) log('DIAG   char ' + c.uuid + '  [' + charProps(c) + ']'); }
+        catch (e) { log('DIAG   (characteristics unreadable: ' + e + ')'); }
+      }
+    }
+    try { dev.gatt.disconnect(); } catch (e) {}
+    log('DIAG done. Copy the log and send it. For the full picture (name + ALL service UUIDs + manufacturer data) use the nRF Connect app on Android.', 'log-ok');
+  } catch (e) {
+    log('DIAG connect failed: ' + e, 'log-err');
+    log('DIAG: even so, the advertised name above already helps. Send the log.', 'log-err');
   }
 }
 
@@ -1298,6 +1338,7 @@ window.addEventListener('DOMContentLoaded', () => {
   { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
   { const b = $('btn-name');  if (b) b.addEventListener('click', () => cmdSetName($('name-in').value)); }
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
+  { const b = $('btn-diag'); if (b) b.addEventListener('click', scanAllDevicesDiagnostic); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }
 
   setControlsEnabled(false);

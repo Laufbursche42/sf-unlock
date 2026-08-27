@@ -90,6 +90,8 @@ window.I18N = {
     s6Title: "Protokoll-Log",
     btnCopyLog: "Log kopieren",
     btnClearLog: "Log leeren",
+    btnDiag: "Diagnose: alle Geräte",
+    diagHint: "Zeigt alle Bluetooth-Geräte an (nicht nur SFS), liest den echten Namen aus, ordnet ihn ein und listet nach dem Verbinden die GATT-Dienste. Für Modelle, die sonst nicht auftauchen. Danach den Log kopieren und schicken.",
     logTxLegend: "TX / blau = gesendet",
     logRxLegend: "RX / braun = empfangen",
 
@@ -202,6 +204,8 @@ window.I18N = {
     s6Title: "Protocol log",
     btnCopyLog: "Copy log",
     btnClearLog: "Clear log",
+    btnDiag: "Diagnostics: all devices",
+    diagHint: "Shows every Bluetooth device (not only SFS), reads the real advertised name, classifies it and lists the GATT services after connecting. For models that otherwise do not show up. Then copy the log and send it.",
     logTxLegend: "TX / blue = sent",
     logRxLegend: "RX / brown = received",
 

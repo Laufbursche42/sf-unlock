@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v19';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v20';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -1282,6 +1282,8 @@ function wireDocViewer() {
       if (target) body.scrollTop = target.offsetTop - body.offsetTop;
       return;
     }
+    const disc = e.target.closest('[data-open-disclaimer]');
+    if (disc) { e.preventDefault(); openHelp('disclaimer'); return; }
     const a = e.target.closest('[data-doc], [data-docfile]');
     if (!a) return;
     e.preventDefault();

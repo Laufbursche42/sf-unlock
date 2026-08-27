@@ -8,11 +8,8 @@ account. It runs in **Bluefy** on iOS and in **Chrome** on Android or desktop.
 
 > **This is a feasibility study.** It exists to show what SoFlow's Bluetooth protocol makes
 > possible, not to be a finished product. The protocols were reconstructed from the official app
-> (com.soflowapp 3.8.5) and are documented byte for byte. A first field test confirmed it: on one
-> scooter a raised limit was actually ridden (30 km/h set, 30 km/h reached), so the controller does
-> not cap the value on its own. Confirmation across the other models is still open. Error-free
-> operation is not promised and there is no warranty of any kind. Whatever you do with it, you do at
-> your own risk.
+> (com.soflowapp 3.8.5) and are documented byte for byte. Error-free operation is not promised and
+> there is no warranty of any kind. Whatever you do with it, you do at your own risk.
 
 **Open the web app: [laufbursche42.github.io/sf-unlock](https://laufbursche42.github.io/sf-unlock/)**
 

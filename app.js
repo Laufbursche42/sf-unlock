@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v18';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v19';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -513,12 +513,15 @@ async function pickAndConnect() {
   if (!navigator.bluetooth) { log('Web Bluetooth not available. Use Bluefy (iOS) or Chrome/Edge.', 'log-err'); return; }
   try {
     let filters;
+    // Newer units (e.g. the SO4 Pro GT2 / Core2) advertise the plain name "SoFlow", not an "SFS..."
+    // name, so the SFS filter alone never shows them. Include "SoFlow" in every chooser.
+    const soflowExtra = [{ namePrefix: 'SoFlow' }, { namePrefix: 'SOFLOW' }];
     if (autoDetect) {
-      log('auto detect: scanning all SoFlow scooters (name prefix SFS / QINGZ) ...');
-      filters = [{ namePrefix: 'SFS' }, { namePrefix: 'QINGZ' }];
+      log('auto detect: scanning SoFlow scooters (name prefix SFS / QINGZ / SoFlow) ...');
+      filters = [{ namePrefix: 'SFS' }, { namePrefix: 'QINGZ' }].concat(soflowExtra);
     } else {
-      log('scanning for ' + activeProto.name + ' (' + activeProto.prefixes.join('/') + ') ...');
-      filters = activeProto.prefixes.map(p => ({ namePrefix: p }));
+      log('scanning for ' + activeProto.name + ' (' + activeProto.prefixes.join('/') + ' / SoFlow) ...');
+      filters = activeProto.prefixes.map(p => ({ namePrefix: p })).concat(soflowExtra);
     }
     device = await navigator.bluetooth.requestDevice({ filters, optionalServices: ALL_SERVICES });
     log('selected: ' + (device.name || '(no name)') + ' [' + device.id + ']');
@@ -528,7 +531,7 @@ async function pickAndConnect() {
     const detected = classifyByName(device.name);
     if (autoDetect) {
       if (detected) applyDetectedProto(detected, 'detected ' + PROTOCOLS[detected].name + ' from name "' + device.name + '"');
-      else { log('could not recognize "' + (device.name || '(no name)') + '" as a SoFlow model. Pick your model manually from the list and try again.', 'log-err'); return; }
+      else { log('this unit advertises as "' + (device.name || '(no name)') + '" without the model in the name (newer SoFlow units do this). Pick your exact model from the list (for the GT2 use SO4 Pro GT, for the Core2 use SO4 Pro Core2) and connect again.', 'log-err'); return; }
     } else if (detected && detected !== activeProto.baseId) {
       applyDetectedProto(detected, 'note: this device advertises as ' + PROTOCOLS[detected].name + ', using that protocol instead of the picked one (the name is authoritative, like the app).');
     }

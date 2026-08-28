@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v24';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v25';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -615,6 +615,7 @@ async function connectGatt(dev) {
   if (connecting) { log('connect already in progress'); return; }
   connecting = true;
   try {
+    if (device && device !== dev) { try { device.removeEventListener('gattserverdisconnected', onDisconnected); } catch (e) {} }
     device = dev;
     device.removeEventListener('gattserverdisconnected', onDisconnected);
     device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -681,7 +682,8 @@ function afterConnect() {
   maybeRunDeepAction();
 }
 
-function onDisconnected() {
+function onDisconnected(ev) {
+  if (ev && ev.target && ev.target !== device) return;   // ignore a late event from a scooter we already left
   connected = false;
   speedUnlocked = false;
   clearAcks();
@@ -711,11 +713,17 @@ function onLinkTimeout() {
 }
 
 function disconnectBle() {
-  try { if (device && device.gatt.connected) device.gatt.disconnect(); } catch (e) {}
+  const d = device;
+  if (d) { try { d.removeEventListener('gattserverdisconnected', onDisconnected); } catch (e) {} }   // its own disconnect must not re-fire onDisconnected
+  try { if (d && d.gatt && d.gatt.connected) d.gatt.disconnect(); } catch (e) {}
+  device = null; server = null; writeChar = null; notifyChar = null;   // no stale handles into the next connection
   connected = false;
+  clearAcks();
   if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
   setStatus('disconnected');
   setControlsEnabled(false);
+  resetTiles();
+  const info = $('devinfo'); if (info) info.textContent = '';
 }
 
 function onCharacteristicValue(ev) {

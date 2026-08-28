@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v25';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v26';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -546,7 +546,7 @@ async function pickAndConnect() {
     const detected = classifyByName(device.name);
     if (autoDetect) {
       if (detected) applyDetectedProto(detected, 'detected ' + PROTOCOLS[detected].name + ' from name "' + device.name + '"');
-      else { log('this unit advertises as "' + (device.name || '(no name)') + '" without the model in the name (newer SoFlow units do this). Pick your exact model from the list (for the GT2 use SO4 Pro GT, for the Core2 use SO4 Pro Core2) and connect again.', 'log-err'); return; }
+      else log('name "' + (device.name || '(no name)') + '" carries no model (newer SoFlow units advertise a plain name). Connecting and classifying from the GATT service instead. If commands misbehave, pick your exact model manually (GT2 = SO4 Pro GT, Core2 = SO4 Pro Core2).', 'log-ok');
     } else if (detected && detected !== activeProto.baseId) {
       applyDetectedProto(detected, 'note: this device advertises as ' + PROTOCOLS[detected].name + ', using that protocol instead of the picked one (the name is authoritative, like the app).');
     }
@@ -611,6 +611,14 @@ async function resolveService(srv) {
   return null;
 }
 
+// When auto detect cannot read the model from the name (newer units advertise "SoFlow"), guess the
+// protocol from the GATT service found: SO6 service -> SO6; KingMeter -> the SO One Pro / SO4 Pro
+// GT/Core2 family; Nordic -> the So5ProBase default (key A). The user can still override manually.
+function protoFromTransport(tkey) {
+  if (tkey === 'so6') return 'so6';
+  if (tkey === 'kingmeter') return 'soonepro';
+  return 'soone';
+}
 async function connectGatt(dev) {
   if (connecting) { log('connect already in progress'); return; }
   connecting = true;
@@ -624,6 +632,11 @@ async function connectGatt(dev) {
     server = await device.gatt.connect();
     const svc = await resolveService(server);
     if (!svc) { try { device.gatt.disconnect(); } catch (e) {} setStatus('no-service'); log('no known service found (' + TRANSPORTS[activeProto.transport].name + ' expected). Wrong model selected? Please report.', 'log-err'); return; }
+    if (autoDetect && !activeProto.baseId) {   // auto mode, name gave no model: classify from the service found
+      const tkey = usedTransport === TRANSPORTS.so6 ? 'so6' : usedTransport === TRANSPORTS.kingmeter ? 'kingmeter' : 'nordic';
+      const guess = protoFromTransport(tkey);
+      applyDetectedProto(guess, 'classified as ' + PROTOCOLS[guess].name + ' from the ' + usedTransport.name + ' service.');
+    }
     writeChar = await svc.getCharacteristic(usedTransport.write).catch(() => null);
     notifyChar = await svc.getCharacteristic(usedTransport.notify).catch(() => null);
     if (!writeChar || !notifyChar) { try { device.gatt.disconnect(); } catch (e) {} setStatus('no-char'); log('write/notify characteristic missing on ' + usedTransport.name, 'log-err'); return; }

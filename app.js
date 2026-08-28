@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v26';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v27';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -198,7 +198,7 @@ const PROTOCOLS = {
 // Branded sub-variants the user recognizes by name (from vehicle_image_utils.dart). They ride on a
 // parent protocol but scan for their own prefix so the user finds their exact model in the chooser.
 const BRANDED = {
-  so4progt:      { label: 'SO4 Pro GT',       proto: 'soonepro',  prefixes: ['SFSGT'] },
+  so4progt:      { label: 'SO4 Pro GT / GT2',  proto: 'soonepro',  prefixes: ['SFSGT'] },
   so4procore2:   { label: 'SO4 Pro Core2',    proto: 'soonepro',  prefixes: ['SFSRE'] },
   so4promax:     { label: 'SO4 Pro Max',      proto: 'sooneplus', prefixes: ['SFSMX'] },
   soonelite:     { label: 'SO One Lite',      proto: 'sooneplus', prefixes: ['SFSOL'] },

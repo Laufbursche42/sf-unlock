@@ -81,11 +81,11 @@ window.I18N = {
     encHint: "Die Verschlüsselung wird automatisch nach deinem Modell und seiner Firmware gewählt. Du musst nichts einstellen.",
 
     s5Title: "Verknüpfungen",
-    scFast: "Entsperren: gesetzter Wert",
-    scSlow: "Sperren: 22 km/h",
+    scFast: "Entsperren: offener Wert",
+    scSlow: "Sperren: eKFV-Wert",
     shortcutIos: "iOS (Bluefy): lege dir eine Verknüpfung auf diese Adresse an.",
     shortcutAndroid: "Android (Chrome): eine Verknüpfung auf dem Startbildschirm auf diese Adresse.",
-    shortcutNote: "Beim Öffnen über eine solche Verknüpfung verbindet sich die Seite mit dem zuletzt genutzten Scooter und setzt die Geschwindigkeit: Sperren auf 22 km/h, Entsperren auf den zuletzt gesetzten Wert. Der Scooter muss an sein und in Reichweite. Nur für Modelle, die die Geschwindigkeit über Bluetooth setzen können.",
+    shortcutNote: "Beim Öffnen über eine solche Verknüpfung verbindet sich die Seite mit dem zuletzt genutzten Scooter und setzt die Geschwindigkeit: Sperren auf den eKFV-Wert, Entsperren auf den offenen Wert. Der Scooter muss an sein und in Reichweite. Nur für Modelle, die die Geschwindigkeit über Bluetooth setzen können.",
 
     s6Title: "Protokoll-Log",
     btnCopyLog: "Log kopieren",
@@ -195,11 +195,11 @@ window.I18N = {
     encHint: "Encryption is chosen automatically from your model and its firmware. There is nothing to set.",
 
     s5Title: "Shortcuts",
-    scFast: "Unlock: set value",
-    scSlow: "Lock: 22 km/h",
+    scFast: "Unlock: open value",
+    scSlow: "Lock: eKFV value",
     shortcutIos: "iOS (Bluefy): add a shortcut pointing at this address.",
     shortcutAndroid: "Android (Chrome): a home-screen shortcut pointing at this address.",
-    shortcutNote: "Opened through such a shortcut, the page reconnects to the last scooter and sets the speed: lock to 22 km/h, unlock to the last value you set. The scooter has to be on and in range. Only for models that can set the speed over Bluetooth.",
+    shortcutNote: "Opened through such a shortcut, the page reconnects to the last scooter and sets the speed: lock to the eKFV value, unlock to the open value. The scooter has to be on and in range. Only for models that can set the speed over Bluetooth.",
 
     s6Title: "Protocol log",
     btnCopyLog: "Copy log",

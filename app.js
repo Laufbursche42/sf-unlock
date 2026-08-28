@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v22';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v23';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -464,7 +464,7 @@ function applyModelUi() {
   const auto = autoDetect && !connected;   // 'auto' picked, no device classified yet -> hide model cards
   const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || auto || !speedSupported();
   const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || !batterySupported();
-  const tb = $('btn-toggle'); if (tb) tb.hidden = !on || auto || !speedSupported();
+  const modeCard = $('mode-card'); if (modeCard) modeCard.hidden = !on || auto || !activeProto.speed;
   const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
   const caps = (on && !auto) ? modelCaps() : {};
   const rows = { 'row-vlock': caps.vlock, 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,

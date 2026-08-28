@@ -27,7 +27,7 @@ window.I18N = {
     modelHint: "Am einfachsten lässt du dein Modell automatisch erkennen. Die Seite sucht dann alle SoFlow-E-Scooter und stellt das Protokoll anhand des Gerätenamens ein, genau wie die Hersteller-App. Alternativ wählst du dein Modell selbst aus der Liste.",
     btnConnect: "Verbinden",
     btnDisconnect: "Trennen",
-    controlsHint: "Nach dem Verbinden schaltet der zweite Knopf zwischen Entsperren (offener Wert) und Sperren (eKFV) um. Web Bluetooth geht auf dem iPhone nur über die App Bluefy, auf Android oder Desktop über Chrome oder Edge.",
+    controlsHint: "Nach dem Verbinden findest du in der Karte Einstellungen den Knopf Entsperren beziehungsweise Sperren. Web Bluetooth geht auf dem iPhone nur über die App Bluefy, auf Android oder Desktop über Chrome oder Edge.",
 
     liveTitle: "Live-Werte vom Scooter",
     tileSpeed: "Geschwindigkeit",
@@ -49,7 +49,8 @@ window.I18N = {
     modeNormal: "normal",
     modeSport: "sport",
     btnSetMode: "Setzen",
-    settingsHint: "Zwei Werte, offen und eKFV. Der Knopf Entsperren/Sperren oben schreibt den jeweiligen Wert als Höchstgeschwindigkeit an den Scooter. Ob der Controller hohe Werte wirklich fährt, zeigt der Test am Fahrzeug.",
+    settingsHint: "Zwei Werte, offen und eKFV. Der Knopf Entsperren/Sperren schreibt den jeweiligen Wert als Höchstgeschwindigkeit an den Scooter. Ob der Controller hohe Werte wirklich fährt, zeigt der Test am Fahrzeug.",
+    modeTitle: "Fahrmodus",
 
     noSpeedTitle: "Kein Speed per Bluetooth",
     noSpeedHint: "Dieses Modell (SO6 beziehungsweise SO4 UL) kann die Höchstgeschwindigkeit nicht über Bluetooth setzen. Sperren und Entsperren gehen weiterhin.",
@@ -141,7 +142,7 @@ window.I18N = {
     modelHint: "The easiest way is auto detect: the page scans all SoFlow scooters and picks the protocol from the device name, exactly like the manufacturer app. Or pick your model from the list yourself.",
     btnConnect: "Connect",
     btnDisconnect: "Disconnect",
-    controlsHint: "After connecting, the second button toggles between Unlock (open value) and Lock (eKFV). Web Bluetooth only works through the Bluefy app on iPhone; on Android or desktop use Chrome or Edge.",
+    controlsHint: "After connecting, the Unlock/Lock button is in the Settings card. Web Bluetooth only works through the Bluefy app on iPhone; on Android or desktop use Chrome or Edge.",
 
     liveTitle: "Live values from the scooter",
     tileSpeed: "Speed",
@@ -163,7 +164,8 @@ window.I18N = {
     modeNormal: "normal",
     modeSport: "sport",
     btnSetMode: "Set",
-    settingsHint: "Two values, open and eKFV. The Unlock/Lock button at the top writes the respective value as the top speed to the scooter. Whether the controller actually rides high values is what the test on the vehicle shows.",
+    settingsHint: "Two values, open and eKFV. The Unlock/Lock button writes the respective value as the top speed to the scooter. Whether the controller actually rides high values is what the test on the vehicle shows.",
+    modeTitle: "Ride mode",
 
     noSpeedTitle: "No speed over Bluetooth",
     noSpeedHint: "This model (SO6 or SO4 UL) cannot set the top speed over Bluetooth. Lock and unlock still work.",

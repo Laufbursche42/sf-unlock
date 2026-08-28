@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v20';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v21';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -260,7 +260,8 @@ function classifyByName(name) {
 const AUTO_PROTO = { id: 'auto', baseId: null, name: 'auto', family: null, variant: null, prefixes: [], transport: 'nordic', crypto: CRYPTO_NONE, speed: false };
 const DEFAULT_MODEL = 'auto';
 
-const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed';
+const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed', LS_EKFV = 'sfu_ekfv';
+let speedUnlocked = false;   // local speed lock/unlock state; SoFlow reports no speed-limit state, so we track it
 
 // --------------------------- state ---------------------------
 
@@ -342,7 +343,7 @@ function copyLogFallback(text) {
   } catch (e) { return false; }
 }
 // Help "?" icons: each card can show its explanation in a modal instead of a permanent paragraph.
-const HELP = { enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], lock: ['lockTitle', 'lockHint'], battery: ['batTitle', 'batHint'], more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'] };
+const HELP = { enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], battery: ['batTitle', 'batHint'], more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'] };
 function openHelp(key) {
   const m = HELP[key]; if (!m) return;
   const dlg = $('help'); if (!dlg) return;
@@ -381,11 +382,25 @@ function setStatus(s) {
 function setControlsEnabled(on) {
   const speedOn = on && activeProto.speed;
   const batOn = on && activeProto.family === 'D7';
-  const list = [['btn-set-speed', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['mode-in', speedOn],
-   ['btn-unlock', on], ['btn-lock', on], ['btn-bat', batOn]];
+  const list = [['btn-toggle', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn], ['mode-in', speedOn],
+   ['btn-bat', batOn]];
   ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
-   'btn-unit', 'unit-in', 'btn-name', 'name-in'].forEach(id => list.push([id, on]));
+   'btn-unit', 'unit-in', 'btn-name', 'name-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
   list.forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
+  updateToggleButton();
+}
+// The toggle shows the action for the current local state: "Entsperren" when locked, "Sperren" when open.
+function openSpeedValue() { const v = parseInt(($('speed-in') || {}).value, 10); return isNaN(v) ? 30 : v; }
+function ekfvSpeedValue() { const v = parseInt(($('ekfv-in') || {}).value, 10); return isNaN(v) ? 20 : v; }
+function updateToggleButton() {
+  const b = $('btn-toggle'); if (!b) return;
+  b.textContent = speedUnlocked ? t('btnLock') : t('btnUnlock');
+}
+function doSpeedToggle() {
+  if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }
+  if (speedUnlocked) { cmdSetMaxSpeed(ekfvSpeedValue(), false); speedUnlocked = false; }   // open -> lock to eKFV
+  else { cmdSetMaxSpeed(openSpeedValue(), true); speedUnlocked = true; }                    // locked -> unlock to open
+  updateToggleButton();
 }
 
 // SO4 only: firmware >= 5.2 -> protocol V52 -> AES.
@@ -449,10 +464,10 @@ function applyModelUi() {
   const auto = autoDetect && !connected;   // 'auto' picked, no device classified yet -> hide model cards
   const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || auto || !speedSupported();
   const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || !batterySupported();
-  const lockCard = $('lock-card'); if (lockCard) lockCard.hidden = !on || auto;
+  const tb = $('btn-toggle'); if (tb) tb.hidden = !on || auto || !speedSupported();
   const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
   const caps = (on && !auto) ? modelCaps() : {};
-  const rows = { 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
+  const rows = { 'row-vlock': caps.vlock, 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
                  'row-ind': caps.indicator, 'row-unit': caps.unit, 'row-name': caps.name };
   let anyMore = false;
   Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
@@ -615,6 +630,7 @@ async function connectGatt(dev) {
     notifyChar.removeEventListener('characteristicvaluechanged', onCharacteristicValue);
     notifyChar.addEventListener('characteristicvaluechanged', onCharacteristicValue);
     connected = true;
+    speedUnlocked = false;   // fresh connect: assume locked, the toggle offers "Entsperren"
     initSent = false;
     fwMajor = null; fwMinor = null;
     so3Secret = 0;
@@ -667,6 +683,7 @@ function afterConnect() {
 
 function onDisconnected() {
   connected = false;
+  speedUnlocked = false;
   clearAcks();
   initSent = false;
   fwMajor = null; fwMinor = null;
@@ -1027,6 +1044,7 @@ function modelCaps() {
   const p = activeProto;
   const so5 = (p.family === 'D7' && p.variant === 'so5base');
   return {
+    vlock:      true,                     // the immobilizer (lock/unlock) exists on every family (belegt)
     indicator:  (p.variant === 'so4'),   // setBleIndicatorLight exists only on the SO4 path (belegt)
     frontLight: so5,
     darkMode:   so5,
@@ -1080,16 +1098,10 @@ function parseDeepLink() {
 function maybeRunDeepAction() {
   if (!pendingDeepAction || !connected) return;
   const a = pendingDeepAction; pendingDeepAction = null;
-  if (!activeProto.speed) { log('shortcut ' + a + ' ignored: this model has no BLE speed command.', 'log-err'); return; }
-  let kmh = 22;   // "slow" throttles back to the legal 22 km/h
-  if (a === 'fast') {   // "fast" restores the last max speed the user set (or the input field)
-    let saved = NaN;
-    try { saved = parseInt(localStorage.getItem(LS_SPEED) || '', 10); } catch (e) {}
-    kmh = isNaN(saved) ? parseInt(($('speed-in') || {}).value, 10) : saved;
-  }
-  if (isNaN(kmh)) kmh = 22;
-  log('shortcut: set max speed ' + kmh + ' km/h (' + a + ')');
-  cmdSetMaxSpeed(kmh, a === 'fast');   // do not let "slow" overwrite the saved fast speed
+  if (!speedSupported()) { log('shortcut ' + a + ' ignored: this model/firmware has no BLE speed command.', 'log-err'); return; }
+  if (a === 'fast') { const v = openSpeedValue(); log('shortcut: unlock -> ' + v + ' km/h'); cmdSetMaxSpeed(v, true); speedUnlocked = true; }
+  else { const v = ekfvSpeedValue(); log('shortcut: lock -> ' + v + ' km/h (eKFV)'); cmdSetMaxSpeed(v, false); speedUnlocked = false; }
+  updateToggleButton();
 }
 async function tryAutoReconnect() {
   if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
@@ -1136,6 +1148,7 @@ function applyLang() {
   { const el = $('link-privacy'); if (el) el.href = docFile('PRIVACY'); }
   { const el = $('link-trademarks'); if (el) el.href = docFile('TRADEMARKS'); }
   { const el = $('langs'); if (el) el.setAttribute('aria-label', t('langGroup')); }
+  updateToggleButton();   // the toggle label is dynamic, refresh it after a language switch
   { const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     const el = $('btn-theme');
     if (el) { el.setAttribute('aria-label', t(dark ? 'themeToLight' : 'themeToDark')); el.title = el.getAttribute('aria-label'); } }
@@ -1313,6 +1326,8 @@ window.addEventListener('DOMContentLoaded', () => {
   try { saved = localStorage.getItem(LS_MODEL); } catch (e) {}
   const validModel = (saved === 'auto') || !!PROTOCOLS[saved] || !!BRANDED[saved];
   setModel(validModel ? saved : 'auto', true);
+  { try { const s = localStorage.getItem(LS_SPEED); if (s && $('speed-in')) $('speed-in').value = s; } catch (e) {} }
+  { try { const k = localStorage.getItem(LS_EKFV); if (k && $('ekfv-in')) $('ekfv-in').value = k; } catch (e) {} }
   applyLang();
 
   // The AES self-test result, in the log and under the encryption card.
@@ -1328,13 +1343,11 @@ window.addEventListener('DOMContentLoaded', () => {
     if ($('btn-conn').dataset.act === 'disconnect') disconnectBle(); else pickAndConnect();
   });
   { const sel = $('model-in'); if (sel) sel.addEventListener('change', () => setModel(sel.value)); }
-  $('btn-set-speed').addEventListener('click', () => {
-    const v = parseInt($('speed-in').value, 10);
-    if (!isNaN(v) && v > 0) cmdSetMaxSpeed(v);
-  });
+  $('btn-toggle').addEventListener('click', doSpeedToggle);
+  { const s = $('speed-in'); if (s) s.addEventListener('change', () => { try { localStorage.setItem(LS_SPEED, s.value); } catch (e) {} }); }
+  { const e2 = $('ekfv-in'); if (e2) e2.addEventListener('change', () => { try { localStorage.setItem(LS_EKFV, e2.value); } catch (er) {} }); }
   $('btn-set-mode').addEventListener('click', () => cmdSetSpeedMode(parseInt($('mode-in').value, 10)));
-  $('btn-unlock').addEventListener('click', cmdUnlock);
-  $('btn-lock').addEventListener('click', cmdLock);
+  { const b = $('btn-vlock'); if (b) b.addEventListener('click', () => ($('vlock-in').value === '1' ? cmdLock() : cmdUnlock())); }
   $('btn-bat').addEventListener('click', cmdBatteryUnlock);
   { const b = $('btn-light'); if (b) b.addEventListener('click', () => cmdFrontLight($('light-in').value === '1')); }
   { const b = $('btn-dark');  if (b) b.addEventListener('click', () => cmdDarkMode($('dark-in').value === '1')); }

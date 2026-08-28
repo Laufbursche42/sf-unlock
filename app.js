@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v27';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v28';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -362,7 +362,7 @@ function clearLog() {
 function setTile(id, val) { const el = $(id); if (el) el.textContent = (val == null ? '-' : val); }
 const MODE_TILE = ['Eco', 'Normal', 'Sport'];
 function modeTile(code) { return MODE_TILE[code] || ('Modus ' + code); }
-function resetTiles() { ['t-speed', 't-mode', 't-batt', 't-lock', 't-volt', 't-fw'].forEach(id => setTile(id, null)); }
+function resetTiles() { ['t-speed', 't-mode', 't-batt', 't-lock', 't-volt', 't-fw', 't-curr', 't-power', 't-err', 't-trip', 't-total'].forEach(id => setTile(id, null)); }
 function statusLabel(s) {
   const map = { disconnected: 'stDisconnected', connecting: 'stConnecting', linking: 'stLinking',
     connected: 'stConnected', 'no-service': 'stNoService', 'no-char': 'stNoChar' };
@@ -838,6 +838,10 @@ function decodeRealtimeSo4(b) {
   setTile('t-lock', t((st & 0x80) ? 'valLocked' : 'valUnlocked'));
   setTile('t-volt', voltage.toFixed(1) + ' V');
   setTile('t-fw', pv);
+  setTile('t-curr', current.toFixed(1) + ' A');
+  setTile('t-err', errCode === 0 ? 'OK' : String(errCode));
+  setTile('t-trip', trip.toFixed(1) + ' km');
+  setTile('t-total', total + ' km');
   log('  realtime: speed=' + speed.toFixed(1) + 'km/h mode=' + modeCode + ' ' + locked +
       ' batt=' + batt + '% ' + voltage.toFixed(1) + 'V ' + current.toFixed(1) + 'A unit=' + unit +
       ' light=' + headlight + ' err=' + errCode + ' fw(proto/disp/cpu)=' + pv + '/' + disp + '/' + cpu +
@@ -863,13 +867,14 @@ function decodeRealtimeSo5(b) {
   setTile('t-mode', modeTile(modeCode));
   setTile('t-lock', t((st & 0x80) ? 'valLocked' : 'valUnlocked'));
   setTile('t-volt', voltage.toFixed(1) + ' V');
-  if (b.length >= 15) parts.push('err=' + bytesToHex(b.subarray(11, 15)));
+  setTile('t-curr', current.toFixed(1) + ' A');
+  if (b.length >= 15) { const eh = bytesToHex(b.subarray(11, 15)); parts.push('err=' + eh); setTile('t-err', /^(00 )*00$/.test(eh) ? 'OK' : eh); }
   if (b.length >= 18) {
     const pv = (b[15] >> 4) + '.' + (b[15] & 0x0f);
     parts.push('fw(proto/disp/cpu)=' + pv + '/' + (b[16] >> 4) + '.' + (b[16] & 0x0f) + '/' + (b[17] >> 4) + '.' + (b[17] & 0x0f));
     setTile('t-fw', pv);
   }
-  if (b.length >= 22) { const trip = ((b[18] << 8) | b[19]) / 10, total = (b[20] << 8) | b[21]; parts.push('trip=' + trip.toFixed(1) + 'km', 'total=' + total + 'km'); }
+  if (b.length >= 22) { const trip = ((b[18] << 8) | b[19]) / 10, total = (b[20] << 8) | b[21]; parts.push('trip=' + trip.toFixed(1) + 'km', 'total=' + total + 'km'); setTile('t-trip', trip.toFixed(1) + ' km'); setTile('t-total', total + ' km'); }
   if (b.length >= 23) { parts.push('batt=' + b[22] + '%'); setTile('t-batt', b[22] + ' %'); }
   if (b.length >= 26) parts.push('dur=' + b[23] + 'h' + b[24] + 'm' + b[25] + 's');
   if (b.length >= 27) parts.push('dark=' + (b[26] === 0 ? 'on' : 'off'));   // darkMode active when byte is 0
@@ -935,7 +940,9 @@ function decodeRealtimeSo6(d) {
   if (d.length >= 14) parts.push('raw[11..13]=' + bytesToHex(d.subarray(11, 14)));
   log('  SO6 realtime (partial, voltage/current/power belegt): ' + parts.join(' '), 'log-ok');
   setTile('t-volt', (be(3) / 10).toFixed(1) + ' V');
-  ['t-speed', 't-mode', 't-batt', 't-lock', 't-fw'].forEach(id => setTile(id, null));
+  if (d.length >= 7) setTile('t-curr', (be(5) / 10).toFixed(1) + ' A');
+  if (d.length >= 9) setTile('t-power', (be(7) / 10).toFixed(1) + ' W');
+  ['t-speed', 't-mode', 't-batt', 't-lock', 't-fw', 't-err', 't-trip', 't-total'].forEach(id => setTile(id, null));
 }
 
 // --------------------------- writing frames + commands ---------------------------

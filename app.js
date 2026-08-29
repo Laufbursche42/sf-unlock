@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v28';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v29';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -749,10 +749,18 @@ function onCharacteristicValue(ev) {
 
 // Inbound dispatch by family. D7 / SO3 frames are plaintext and start with 0xD7 plus an additive
 // checksum. SO6 frames are AES-encrypted and are decrypted first.
+// KingMeter-transport SoFlow units (SO One Pro and the branded SO4 Pro GT2 / Core2) send every
+// inbound frame - both the command echo and the realtime telemetry - with 0xD5 as the start byte
+// instead of 0xD7. The rest of the frame (LEN, OPCODE, byte 3, payload, additive checksum) is
+// byte-for-byte the same. belegt from a GT2/Core2 log: the echo of a set-max-speed command comes
+// back as "D5 07 A9 ..." with a valid checksum, and the realtime frames "D5 1C 1D ..." decode
+// cleanly with the So5ProBase reader. So accept both start bytes; without this the tool threw every
+// GT2/Core2 frame away, which is why their live values stayed empty and every command was falsely
+// reported as unconfirmed even though it worked.
 function handleFrame(b) {
   if (!b || b.length < 2) return;
   if (activeProto.family === 'SO6') { handleFrameSO6(b); return; }
-  if (b[0] !== 0xD7) { log('  note: frame does not start with 0xD7; not decoding (raw hex above).'); return; }
+  if (b[0] !== 0xD7 && b[0] !== 0xD5) { log('  note: frame does not start with 0xD7 or 0xD5; not decoding (raw hex above).'); return; }
   let sum = 0; for (let i = 1; i < b.length - 1; i++) sum = (sum + b[i]) & 0xff;   // LEN .. last payload byte
   const chkOk = (sum === b[b.length - 1]);
   log('  frame: len=' + b.length + ', checksum ' +

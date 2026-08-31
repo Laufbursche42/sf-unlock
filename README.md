@@ -112,7 +112,6 @@ app.js                    - all logic: AES-128-ECB, frame builders, the model re
                             connect, decode, UI and the diagnostic log
 i18n.js                   - the German and English string table
 styles.css                - theme and layout
-PROTOCOL.md               - the reverse-engineered BLE protocol reference
 GUIDE.de.md, GUIDE.en.md  - the step-by-step guide
 tools/soflow_speed.py     - a Python (bleak) reference for the frame and AES
 scripts/                  - check-i18n.js and security-scan.py (run in CI and the git hooks)
@@ -130,7 +129,6 @@ scripts/                  - check-i18n.js and security-scan.py (run in CI and th
 - Commands are built per family and written to the write characteristic. Notifications are decoded
   per family; the SO6 family decrypts them first.
 - Encryption is automatic per model. The two static AES keys live in `app.js`.
-- The full byte-level protocol for every model is in `PROTOCOL.md`.
 
 ## Development
 

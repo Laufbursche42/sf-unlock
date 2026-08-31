@@ -112,6 +112,9 @@ code { font-family: var(--mono); font-size: 12px; background: var(--field); bord
 .set-row { display: grid; grid-template-columns: minmax(0, 1fr) 10.5rem; gap: 10px; align-items: center; }
 .set-row label { grid-column: 1 / -1; }
 .set-row input, .set-row select, .set-row button { width: 100%; flex: none; }
+/* Open and eKFV sit side by side in two columns; each field stacks its label over its input. */
+.speed-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.speed-cols .set-row { grid-template-columns: 1fr; }
 
 /* Document viewer. Only the open dialog is a flex column. */
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--card);

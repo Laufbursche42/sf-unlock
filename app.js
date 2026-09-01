@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v33';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v34';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -1126,10 +1126,28 @@ function parseDeepLink() {
 function maybeRunDeepAction() {
   if (!pendingDeepAction || !connected) return;
   const a = pendingDeepAction; pendingDeepAction = null;
+  updateShortcutPrompt();   // the action runs now, take the shortcut prompt down
   if (!speedSupported()) { log('shortcut ' + a + ' ignored: this model/firmware has no BLE speed command.', 'log-err'); return; }
   if (a === 'fast') { const v = openSpeedValue(); log('shortcut: unlock -> ' + v + ' km/h'); cmdSetMaxSpeed(v, true); speedUnlocked = true; }
   else { const v = ekfvSpeedValue(); log('shortcut: lock -> ' + v + ' km/h (eKFV)'); cmdSetMaxSpeed(v, false); speedUnlocked = false; }
   updateToggleButton();
+}
+// A ?do=fast / ?do=slow shortcut cannot connect on its own: Web Bluetooth needs a user gesture and
+// iOS (Bluefy) has no getDevices() for a silent reconnect. So when a shortcut is pending we surface one
+// big button; tapping it is the gesture that connects and then runs the pending action. On browsers
+// where the silent reconnect does work the button is simply never needed.
+function updateShortcutPrompt() {
+  const card = $('shortcut-card'); if (!card) return;
+  if (!pendingDeepAction) { card.hidden = true; return; }
+  const fast = (pendingDeepAction === 'fast');
+  const txt = $('shortcut-text'); if (txt) txt.textContent = t(fast ? 'scPromptFast' : 'scPromptSlow');
+  const b = $('btn-shortcut'); if (b) b.textContent = t(fast ? 'scGoFast' : 'scGoSlow');
+  card.hidden = false;
+}
+function runShortcutButton() {
+  if (!pendingDeepAction) return;
+  if (connected) maybeRunDeepAction();   // already connected: just send the command
+  else pickAndConnect();                 // the tap is the gesture; afterConnect runs the pending action
 }
 async function tryAutoReconnect() {
   if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
@@ -1138,7 +1156,7 @@ async function tryAutoReconnect() {
     if (!devs || !devs.length) return;
     const savedId = localStorage.getItem(LS_DEVICE);
     let dev = (savedId && devs.find(d => d.id === savedId)) || null;
-    if (!dev && autoDetect) dev = devs.find(d => classifyByName(d.name)) || null;
+    if (!dev && autoDetect) dev = devs.find(d => classifyByName(d.name)) || devs.find(d => /^(SoFlow|SOFLOW)/i.test(d.name || '')) || null;
     if (!dev) dev = devs.find(d => (d.name || '') && activeProto.prefixes.some(p => d.name.startsWith(p))) || null;
     if (!dev) return;
     // Classify by name like pickAndConnect, so the reconnect (auto mode, or a mismatched pick) uses the
@@ -1146,7 +1164,7 @@ async function tryAutoReconnect() {
     const detected = classifyByName(dev.name);
     if (autoDetect) {
       if (detected) applyDetectedProto(detected, 'auto-reconnect detected ' + PROTOCOLS[detected].name + ' from "' + dev.name + '"');
-      else { log('auto-reconnect: could not recognize "' + (dev.name || '(no name)') + '". Pick your model manually.', 'log-err'); return; }
+      else log('auto-reconnect: name "' + (dev.name || '(no name)') + '" carries no model; connecting and classifying from the GATT service (newer SoFlow units).', 'log-ok');   // do NOT bail: connectGatt classifies from the transport in auto mode
     } else if (detected && detected !== activeProto.baseId) {
       applyDetectedProto(detected, 'note: the reconnected device is a ' + PROTOCOLS[detected].name + ', using that protocol.');
     }
@@ -1177,6 +1195,7 @@ function applyLang() {
   { const el = $('link-trademarks'); if (el) el.href = docFile('TRADEMARKS'); }
   { const el = $('langs'); if (el) el.setAttribute('aria-label', t('langGroup')); }
   updateToggleButton();   // the toggle label is dynamic, refresh it after a language switch
+  updateShortcutPrompt();   // the shortcut prompt text/label is dynamic too
   { const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     const el = $('btn-theme');
     if (el) { el.setAttribute('aria-label', t(dark ? 'themeToLight' : 'themeToDark')); el.title = el.getAttribute('aria-label'); } }
@@ -1382,6 +1401,7 @@ window.addEventListener('DOMContentLoaded', () => {
   { const b = $('btn-zero');  if (b) b.addEventListener('click', () => cmdZeroStart($('zero-in').value === '1')); }
   { const b = $('btn-ind');   if (b) b.addEventListener('click', () => cmdIndicator($('ind-in').value === '1')); }
   { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
+  { const b = $('btn-shortcut'); if (b) b.addEventListener('click', runShortcutButton); }
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
   { const b = $('btn-diag'); if (b) b.addEventListener('click', scanAllDevicesDiagnostic); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }
@@ -1390,5 +1410,6 @@ window.addEventListener('DOMContentLoaded', () => {
   updateEncState();
   if (!navigator.bluetooth) log('Web Bluetooth not available. On iOS use the Bluefy browser.', 'log-err');
   parseDeepLink();
+  updateShortcutPrompt();
   if (pendingDeepAction) tryAutoReconnect();
 });

@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v32';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v33';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -385,7 +385,7 @@ function setControlsEnabled(on) {
   const list = [['btn-toggle', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn], ['mode-in', speedOn],
    ['btn-bat', batOn]];
   ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
-   'btn-unit', 'unit-in', 'btn-name', 'name-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
+   'btn-unit', 'unit-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
   list.forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
   updateToggleButton();
 }
@@ -468,7 +468,7 @@ function applyModelUi() {
   const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
   const caps = (on && !auto) ? modelCaps() : {};
   const rows = { 'row-vlock': caps.vlock, 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
-                 'row-ind': caps.indicator, 'row-unit': caps.unit, 'row-name': caps.name };
+                 'row-ind': caps.indicator, 'row-unit': caps.unit };
   let anyMore = false;
   Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
   const moreCard = $('more-card'); if (moreCard) moreCard.hidden = !anyMore;
@@ -1074,7 +1074,11 @@ function cmdBatteryUnlock() {
 
 // Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
 // dark mode 0xD6, zero-start 0xA5, unit 0xA7 (SO3 0xAB), name 0xFF (SO6 {04,01}), indicator 0xA6.
-// front light / dark mode / zero-start / unit / name are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light (setBleIndicatorLight) is on the SO4 path only; unit also on SO3, name also on SO6.
+// front light / dark mode / zero-start / unit are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light (setBleIndicatorLight) is on the SO4 path only; unit also on SO3.
+// The BLE-name command (setName 0xFF / SO6 {04,01}) is deliberately NOT exposed: the SoFlow app lists
+// a scooter only when its advertised name still matches the model regex (VehicleType._fromName, e.g.
+// (SFSOP|SFSGT|SFSRE).* for the SO One Pro / Core2). A renamed scooter drops out of the app entirely,
+// so we do not offer a way to rename from here.
 // modelCaps() decides which control a model shows.
 function modelCaps() {
   const p = activeProto;
@@ -1086,7 +1090,6 @@ function modelCaps() {
     darkMode:   so5,
     zeroStart:  so5,
     unit:       so5 || (p.family === 'SO3'),
-    name:       so5 || (p.family === 'SO6'),
   };
 }
 function b01(on) { return on ? 0x01 : 0x00; }
@@ -1102,21 +1105,10 @@ function cmdSetUnit(imperial) {
   if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, imperial ? 0x02 : 0x00], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);   // belegt: imperial=[00,02], metric=[00,00]
   else transmit(buildFrameD7(0xA7, [b01(imperial)], 0x00), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xA7', 'op:' + 0xA7);
 }
-async function cmdSetName(name) {
-  const s = (name || '').trim().slice(0, 20);
-  if (!s) { log('name is empty.', 'log-err'); return; }
-  const utf8 = Array.from(new TextEncoder().encode(s));
-  if (activeProto.family === 'SO6') {
-    if (utf8.length < 9) {
-      transmit(buildFrameSO6(0x04, 0x01, utf8), 'set name "' + s + '" {04,01}', 'so6:4:1');
-    } else {   // belegt: >=9 bytes -> first 9 in {04,01}, remainder in {04,02} after write success
-      await transmit(buildFrameSO6(0x04, 0x01, utf8.slice(0, 9)), 'set name part 1 {04,01} (first 9 bytes)', 'so6:4:1');
-      transmit(buildFrameSO6(0x04, 0x02, utf8.slice(9)), 'set name part 2 {04,02} (remainder)', 'so6:4:2');
-    }
-  } else {
-    transmit(buildFrameD7(0xFF, utf8.concat([0xFE]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0xFE trails the UTF-8 name (belegt: So5ProBaseDataDelegate.setName appends byte 0xFE, so5pro_data_delegate.dart @0x8d4390); D7 only
-  }
-}
+// The BLE-name command (setName) is intentionally not exposed in this tool. Renaming a scooter makes
+// the official SoFlow app drop it from its list (the app matches the advertised name against a fixed
+// per-model regex in VehicleType._fromName), so the command is left out to avoid that footgun. The
+// frame details stay documented in the analysis PDF.
 
 // --------------------------- shortcut deep-link + auto-reconnect ---------------------------
 // A home-screen shortcut opens the page with ?do=slow or ?do=fast. On load the page reconnects
@@ -1390,7 +1382,6 @@ window.addEventListener('DOMContentLoaded', () => {
   { const b = $('btn-zero');  if (b) b.addEventListener('click', () => cmdZeroStart($('zero-in').value === '1')); }
   { const b = $('btn-ind');   if (b) b.addEventListener('click', () => cmdIndicator($('ind-in').value === '1')); }
   { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
-  { const b = $('btn-name');  if (b) b.addEventListener('click', () => cmdSetName($('name-in').value)); }
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
   { const b = $('btn-diag'); if (b) b.addEventListener('click', scanAllDevicesDiagnostic); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }

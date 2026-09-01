@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v34';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v35';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -1139,9 +1139,18 @@ function maybeRunDeepAction() {
 function updateShortcutPrompt() {
   const card = $('shortcut-card'); if (!card) return;
   if (!pendingDeepAction) { card.hidden = true; return; }
+  const txt = $('shortcut-text'), b = $('btn-shortcut');
+  // No Web Bluetooth (opened in Safari, or a webview) means the shortcut can never connect. Say so
+  // plainly instead of leaving a dead page: on iPhone the link must open in Bluefy, on Android in Chrome.
+  if (!navigator.bluetooth) {
+    if (txt) txt.textContent = t('scNoBt');
+    if (b) b.hidden = true;
+    card.hidden = false;
+    return;
+  }
   const fast = (pendingDeepAction === 'fast');
-  const txt = $('shortcut-text'); if (txt) txt.textContent = t(fast ? 'scPromptFast' : 'scPromptSlow');
-  const b = $('btn-shortcut'); if (b) b.textContent = t(fast ? 'scGoFast' : 'scGoSlow');
+  if (b) { b.hidden = false; b.textContent = t(fast ? 'scGoFast' : 'scGoSlow'); }
+  if (txt) txt.textContent = t(fast ? 'scPromptFast' : 'scPromptSlow');
   card.hidden = false;
 }
 function runShortcutButton() {

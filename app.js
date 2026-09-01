@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v31';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v32';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -1114,7 +1114,7 @@ async function cmdSetName(name) {
       transmit(buildFrameSO6(0x04, 0x02, utf8.slice(9)), 'set name part 2 {04,02} (remainder)', 'so6:4:2');
     }
   } else {
-    transmit(buildFrameD7(0xFF, utf8.concat([0x7F]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0x7F trails the name (D7 only)
+    transmit(buildFrameD7(0xFF, utf8.concat([0xFE]), 0x00), 'set name "' + s + '" 0xFF', 'op:' + 0xFF);   // 0xFE trails the UTF-8 name (belegt: So5ProBaseDataDelegate.setName appends byte 0xFE, so5pro_data_delegate.dart @0x8d4390); D7 only
   }
 }
 

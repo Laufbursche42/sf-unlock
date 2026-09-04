@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v38';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v39';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -201,6 +201,7 @@ const BRANDED = {
   so4progt:      { label: 'SO4 Pro GT / GT2',  proto: 'soonepro',  prefixes: ['SFSGT'] },
   so4procore2:   { label: 'SO4 Pro Core2',    proto: 'soonepro',  prefixes: ['SFSRE'] },
   so4promax:     { label: 'SO4 Pro Max',      proto: 'sooneplus', prefixes: ['SFSMX'] },
+  so4promax2:    { label: 'SO4 Pro Max 2',    proto: 'soonepro',  prefixes: ['SFSMX'] },
   soonelite:     { label: 'SO One Lite',      proto: 'sooneplus', prefixes: ['SFSOL'] },
   soonelitepro:  { label: 'SO One Lite Pro',  proto: 'sooneplus', prefixes: ['SFSLP'] },
   sooneprime:    { label: 'SO One Prime',     proto: 'sooneplus', prefixes: ['SFSPE'] },
@@ -210,7 +211,7 @@ const BRANDED = {
 // name exactly like the app. Every marketing model the app knows is present.
 const MODEL_ORDER = [
   'auto',
-  'so4', 'so4ul', 'so4progt', 'so4procore2', 'so4promax',
+  'so4', 'so4ul', 'so4progt', 'so4procore2', 'so4promax', 'so4promax2',
   'soone', 'sooneplus', 'soonepro', 'soonelite', 'soonelitepro', 'sooneprime', 'sooneprimemax',
   'so1', 'so2air', 'so2air2', 'so2zero', 'so2grover', 'so2plusgrover',
   'so3', 'so5', 'so5pro', 'so6', 'somytier', 'sox',
@@ -391,7 +392,7 @@ function setControlsEnabled(on) {
 }
 // The toggle shows the action for the current local state: "Entsperren" when locked, "Sperren" when open.
 function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); return isNaN(v) ? 30 : v; }
-function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 20 : v; }
+function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 22 : v; }
 function updateToggleButton() {
   const b = $('btn-toggle'); if (!b) return;
   b.textContent = speedUnlocked ? t('btnLock') : t('btnUnlock');

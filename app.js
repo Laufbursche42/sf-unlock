@@ -955,7 +955,7 @@ function decodeRealtimeSo6(d) {
 
 // --------------------------- writing frames + commands ---------------------------
 
-// Serialize writes and space them: the controller drops frames sent back to back (belegt, GT2 log).
+// Serialize writes and space them; the controller drops frames sent back to back.
 const WRITE_SETTLE_MS = 250;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let writeQueue = Promise.resolve();

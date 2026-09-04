@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v37';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v38';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -390,8 +390,8 @@ function setControlsEnabled(on) {
   updateToggleButton();
 }
 // The toggle shows the action for the current local state: "Entsperren" when locked, "Sperren" when open.
-function openSpeedValue() { const v = parseInt(($('speed-in') || {}).value, 10); return isNaN(v) ? 30 : v; }
-function ekfvSpeedValue() { const v = parseInt(($('ekfv-in') || {}).value, 10); return isNaN(v) ? 20 : v; }
+function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); return isNaN(v) ? 30 : v; }
+function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 20 : v; }
 function updateToggleButton() {
   const b = $('btn-toggle'); if (!b) return;
   b.textContent = speedUnlocked ? t('btnLock') : t('btnUnlock');

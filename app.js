@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v36';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v37';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -955,12 +955,9 @@ function decodeRealtimeSo6(d) {
 
 // --------------------------- writing frames + commands ---------------------------
 
-// Web Bluetooth permits only one in-flight GATT operation at a time; a second write started before the
-// first resolves throws "GATT operation already in progress". The connect handshake fires several
-// frames back to back (0xA6 then 0x1D) and a shortcut then fires its speed command (0xA9) immediately
-// after, so without serialization those later writes collided and were silently dropped - the scooter
-// connected but the lock/unlock (0xA9) never went out. That is exactly the reported "verbindet, aber
-// sperrt/entsperrt nicht". Chain every write so they run strictly one after another.
+// Serialize writes and space them: the controller drops frames sent back to back (belegt, GT2 log).
+const WRITE_SETTLE_MS = 250;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 let writeQueue = Promise.resolve();
 function writeFrame(bytes) {
   const doWrite = () => {
@@ -970,8 +967,8 @@ function writeFrame(bytes) {
     if (wc.writeValueWithResponse) return wc.writeValueWithResponse(bytes);
     return wc.writeValue(bytes);
   };
-  const result = writeQueue.then(doWrite, doWrite);   // start only after the previous write settles
-  writeQueue = result.catch(() => {});                // a failed write must not break the chain
+  const result = writeQueue.then(doWrite, doWrite);        // start only after the previous write settled
+  writeQueue = result.then(() => sleep(WRITE_SETTLE_MS), () => sleep(WRITE_SETTLE_MS));   // pause so the controller keeps up; a failed write must not break the chain
   return result;
 }
 

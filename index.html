@@ -10,7 +10,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 <div class="wrap">
@@ -27,6 +27,8 @@
       </div>
     </div>
   </header>
+
+  <p class="warn platform-note" id="platform-note"><span data-t="appleOnly"></span> <a href="https://github.com/Laufbursche42/sf-lb-edition/releases/latest" target="_blank" rel="noopener noreferrer" data-t="androidUseApp"></a></p>
 
   <div class="card shortcut" id="shortcut-card" hidden>
     <p class="warn" id="shortcut-text"></p>
@@ -101,14 +103,10 @@
 
   <div class="card" id="mode-card">
     <h2 data-t="modeTitle"></h2>
-    <div class="set-row">
-      <label data-t="lblMode"></label>
-      <select id="mode-in" disabled>
-        <option value="0" data-t="modeEco"></option>
-        <option value="1" data-t="modeNormal"></option>
-        <option value="2" data-t="modeSport"></option>
-      </select>
-      <button id="btn-set-mode" data-t="btnSetMode" disabled></button>
+    <div class="mode-cols" role="group" aria-label="Ride mode">
+      <button type="button" id="btn-mode-0" class="mode-btn" data-mode="0" data-t="modeEco" disabled></button>
+      <button type="button" id="btn-mode-1" class="mode-btn" data-mode="1" data-t="modeNormal" disabled></button>
+      <button type="button" id="btn-mode-2" class="mode-btn" data-mode="2" data-t="modeSport" disabled></button>
     </div>
   </div>
 

@@ -116,6 +116,11 @@ code { font-family: var(--mono); font-size: 12px; background: var(--field); bord
 .speed-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
 .speed-cols .set-row { grid-template-columns: 1fr; }
 
+/* Ride modes side by side (eco / normal / sport), not stacked. The active mode is highlighted. */
+.mode-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.mode-cols .mode-btn { width: 100%; text-transform: capitalize; }
+.mode-cols .mode-btn.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
 /* Document viewer. Only the open dialog is a flex column. */
 dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--card);
   color: var(--text); max-width: 44rem; width: calc(100% - 2rem); padding: 0; }

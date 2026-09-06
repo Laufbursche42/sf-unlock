@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v41';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v42';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -363,6 +363,10 @@ function clearLog() {
 function setTile(id, val) { const el = $(id); if (el) el.textContent = (val == null ? '-' : val); }
 const MODE_TILE = ['Eco', 'Normal', 'Sport'];
 function modeTile(code) { return MODE_TILE[code] || ('Modus ' + code); }
+// Highlight the ride-mode column the scooter currently reports (0 eco / 1 normal / 2 sport).
+function setActiveMode(code) {
+  [0, 1, 2].forEach(i => { const b = $('btn-mode-' + i); if (b) b.classList.toggle('active', i === code); });
+}
 function resetTiles() { ['t-speed', 't-mode', 't-batt', 't-lock', 't-volt', 't-fw', 't-curr', 't-power', 't-err', 't-trip', 't-total'].forEach(id => setTile(id, null)); }
 function statusLabel(s) {
   const map = { disconnected: 'stDisconnected', connecting: 'stConnecting', linking: 'stLinking',
@@ -383,7 +387,8 @@ function setStatus(s) {
 function setControlsEnabled(on) {
   const speedOn = on && activeProto.speed;
   const batOn = on && activeProto.family === 'D7';
-  const list = [['btn-toggle', speedOn], ['btn-set-mode', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn], ['mode-in', speedOn],
+  const list = [['btn-toggle', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn],
+   ['btn-mode-0', speedOn], ['btn-mode-1', speedOn], ['btn-mode-2', speedOn],
    ['btn-bat', batOn]];
   ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
    'btn-unit', 'unit-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
@@ -843,6 +848,7 @@ function decodeRealtimeSo4(b) {
   const batt = b[19];
   setTile('t-speed', speed.toFixed(1) + ' km/h');
   setTile('t-mode', modeTile(modeCode));
+  setActiveMode(modeCode);
   setTile('t-batt', batt + ' %');
   setTile('t-lock', t((st & 0x80) ? 'valLocked' : 'valUnlocked'));
   setTile('t-volt', voltage.toFixed(1) + ' V');
@@ -874,6 +880,7 @@ function decodeRealtimeSo5(b) {
     'light=' + headlight, voltage.toFixed(1) + 'V', current.toFixed(1) + 'A'];
   setTile('t-speed', speed.toFixed(1) + ' km/h');
   setTile('t-mode', modeTile(modeCode));
+  setActiveMode(modeCode);
   setTile('t-lock', t((st & 0x80) ? 'valLocked' : 'valUnlocked'));
   setTile('t-volt', voltage.toFixed(1) + ' V');
   setTile('t-curr', current.toFixed(1) + ' A');
@@ -905,6 +912,7 @@ function decodeSo3Realtime(b) {
   if (b.length >= 15) { const power = ((b[11] << 8) | b[12]) / 10, energy = ((b[13] << 8) | b[14]) / 10; parts.push('power=' + power.toFixed(1) + 'W', 'energy=' + energy.toFixed(1) + 'Wh'); }
   setTile('t-speed', speed.toFixed(1) + ' km/h');
   setTile('t-mode', modeTile(modeCode));
+  setActiveMode(modeCode);
   setTile('t-volt', voltage.toFixed(1) + ' V');
   log('  SO3 0x1D: ' + parts.join(' '), 'log-ok');
 }
@@ -1412,7 +1420,10 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btn-toggle').addEventListener('click', doSpeedToggle);
   { const s = $('speed-in'); if (s) s.addEventListener('change', () => { try { localStorage.setItem(LS_SPEED, s.value); } catch (e) {} }); }
   { const e2 = $('ekfv-in'); if (e2) e2.addEventListener('change', () => { try { localStorage.setItem(LS_EKFV, e2.value); } catch (er) {} }); }
-  $('btn-set-mode').addEventListener('click', () => cmdSetSpeedMode(parseInt($('mode-in').value, 10)));
+  [0, 1, 2].forEach(m => {
+    const b = $('btn-mode-' + m);
+    if (b) b.addEventListener('click', () => { setActiveMode(m); cmdSetSpeedMode(m); });
+  });
   { const b = $('btn-vlock'); if (b) b.addEventListener('click', () => ($('vlock-in').value === '1' ? cmdLock() : cmdUnlock())); }
   $('btn-bat').addEventListener('click', cmdBatteryUnlock);
   { const b = $('btn-light'); if (b) b.addEventListener('click', () => cmdFrontLight($('light-in').value === '1')); }

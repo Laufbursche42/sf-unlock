@@ -10,6 +10,8 @@ window.I18N = {
   de: {
     pageTitle: "Laufbursche SoFlow Tool",
     brandSub: "SoFlow Tool",
+    appleOnly: "Diese Seite ist für Apple-Geräte gedacht. Android-Nutzer verwenden bitte die App:",
+    androidUseApp: "sf-lb-edition herunterladen",
     langGroup: "Sprache",
     themeToLight: "Auf helle Darstellung umschalten",
     themeToDark: "Auf dunkle Darstellung umschalten",
@@ -134,6 +136,8 @@ window.I18N = {
   en: {
     pageTitle: "Laufbursche SoFlow Tool",
     brandSub: "SoFlow Tool",
+    appleOnly: "This page is for Apple devices. Android users please use the app instead:",
+    androidUseApp: "Download sf-lb-edition",
     langGroup: "Language",
     themeToLight: "Switch to light theme",
     themeToDark: "Switch to dark theme",

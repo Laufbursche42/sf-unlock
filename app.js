@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v42';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v43';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -404,8 +404,13 @@ function updateToggleButton() {
 }
 function doSpeedToggle() {
   if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }
-  if (speedUnlocked) { cmdSetMaxSpeed(ekfvSpeedValue(), false); speedUnlocked = false; }   // open -> lock to eKFV
-  else { cmdSetMaxSpeed(openSpeedValue(), true); speedUnlocked = true; }                    // locked -> unlock to open
+  // setMaxSpeed applies to the gear that is active, so switch to the sport gear FIRST, then send the
+  // value - that way the open/eKFV value always lands on sport and eco/normal stay untouched. The two
+  // frames are spaced by the write queue (250 ms) so the controller does not drop the second one.
+  if (activeProto.speed) cmdSetSpeedMode(2);
+  if (speedUnlocked) { cmdSetMaxSpeed(ekfvSpeedValue(), false); speedUnlocked = false; }   // sport -> lock to eKFV
+  else { cmdSetMaxSpeed(openSpeedValue(), true); speedUnlocked = true; }                    // sport -> unlock to open
+  setActiveMode(2);
   updateToggleButton();
 }
 

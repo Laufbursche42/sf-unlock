@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v44';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v45';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -400,7 +400,7 @@ function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); r
 function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 22 : v; }
 function updateToggleButton() {
   const b = $('btn-toggle'); if (!b) return;
-  b.textContent = speedUnlocked ? t('btnLock') : t('btnUnlock');
+  b.textContent = speedUnlocked ? t('drosselOn') : t('drosselOff');
 }
 function doSpeedToggle() {
   if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }

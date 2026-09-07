@@ -47,10 +47,10 @@ window.I18N = {
     valUnlocked: "offen",
     liveHint: "Die Live-Werte kommen direkt vom Scooter. Nicht jedes Modell liefert jedes Feld, dann steht dort ein Strich. Die rohen Meldungen stehen zusätzlich als Hex im Log.",
 
-    s3Title: "Einstellungen",
+    s3Title: "eKFV Drossel",
     lblOpen: "Offen (km/h)",
     lblEkfv: "eKFV (km/h)",
-    speedValuesHint: "\"Entsperren\" schreibt den offenen Wert, \"Sperren\" den eKFV-Wert (Standard 22 km/h, also 20 plus 10 Prozent Toleranz). Zehntel sind erlaubt, zum Beispiel 22.4. Beide Werte merkt sich der Browser auf diesem Gerät.",
+    speedValuesHint: "\"Drossel aus\" schreibt den offenen Wert, \"Drossel ein\" den eKFV-Wert (Standard 22 km/h, also 20 plus 10 Prozent Toleranz). Zehntel sind erlaubt, zum Beispiel 22.4. Beide Werte merkt sich der Browser auf diesem Gerät.",
     lblMode: "Fahrmodus",
     modeEco: "eco",
     modeNormal: "normal",
@@ -64,13 +64,15 @@ window.I18N = {
 
     btnUnlock: "Entsperren",
     btnLock: "Sperren",
-    lblVlock: "Wegfahrsperre (Diebstahlschutz)",
+    drosselOff: "Drossel aus",
+    drosselOn: "Drossel ein",
+    lblVlock: "Diebstahlschutz",
 
     batTitle: "Akku entsperren",
     btnBat: "Akku entsperren",
 
     moreTitle: "Weitere Einstellungen",
-    moreHint: "Zusätzliche Funktionen, die dein Modell unterstützt: Wegfahrsperre (Diebstahlschutz), Scheinwerfer, Dunkelmodus, Zero-Start, Einheit, Anzeigelicht und der Bluetooth-Name. Es erscheint nur, was dein Modell kann.",
+    moreHint: "Zusätzliche Funktionen, die dein Modell unterstützt: Diebstahlschutz, Scheinwerfer, Dunkelmodus, Zero-Start, Einheit, Anzeigelicht und der Bluetooth-Name. Es erscheint nur, was dein Modell kann.",
     lblLight: "Scheinwerfer",
     lblDark: "Dunkelmodus",
     lblZero: "Zero-Start",
@@ -173,10 +175,10 @@ window.I18N = {
     valUnlocked: "open",
     liveHint: "The live values come straight from the scooter. Not every model provides every field; where it does not, a dash is shown. The raw messages are also logged as hex.",
 
-    s3Title: "Settings",
+    s3Title: "eKFV limiter",
     lblOpen: "Open (km/h)",
     lblEkfv: "eKFV (km/h)",
-    speedValuesHint: "\"Unlock\" writes the open value, \"Lock\" the eKFV value (default 22 km/h, i.e. 20 plus 10 percent tolerance). Tenths are allowed, for example 22.4. Both values are remembered in this browser.",
+    speedValuesHint: "\"Limiter off\" writes the open value, \"Limiter on\" the eKFV value (default 22 km/h, i.e. 20 plus 10 percent tolerance). Tenths are allowed, for example 22.4. Both values are remembered in this browser.",
     lblMode: "Ride mode",
     modeEco: "eco",
     modeNormal: "normal",
@@ -190,13 +192,15 @@ window.I18N = {
 
     btnUnlock: "Unlock",
     btnLock: "Lock",
-    lblVlock: "Immobilizer (anti-theft)",
+    drosselOff: "Limiter off",
+    drosselOn: "Limiter on",
+    lblVlock: "Anti-Theft",
 
     batTitle: "Battery unlock",
     btnBat: "Battery unlock",
 
     moreTitle: "More settings",
-    moreHint: "Extra functions your model supports: immobilizer (anti-theft), headlight, dark mode, zero-start, unit, indicator light and the Bluetooth name. Only what your model can do is shown.",
+    moreHint: "Extra functions your model supports: anti-theft lock, headlight, dark mode, zero-start, unit, indicator light and the Bluetooth name. Only what your model can do is shown.",
     lblLight: "Headlight",
     lblDark: "Dark mode",
     lblZero: "Zero-start",

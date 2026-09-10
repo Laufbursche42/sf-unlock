@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v45';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v46';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -262,7 +262,6 @@ const AUTO_PROTO = { id: 'auto', baseId: null, name: 'auto', family: null, varia
 const DEFAULT_MODEL = 'auto';
 
 const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed', LS_EKFV = 'sfu_ekfv';
-let speedUnlocked = false;   // local speed lock/unlock state; SoFlow reports no speed-limit state, so we track it
 
 // --------------------------- state ---------------------------
 
@@ -387,26 +386,24 @@ function setStatus(s) {
 function setControlsEnabled(on) {
   const speedOn = on && activeProto.speed;
   const batOn = on && activeProto.family === 'D7';
-  const list = [['btn-toggle', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn],
+  const list = [['btn-drossel-off', speedOn], ['btn-drossel-on', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn],
    ['btn-mode-0', speedOn], ['btn-mode-1', speedOn], ['btn-mode-2', speedOn],
    ['btn-bat', batOn]];
   ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
    'btn-unit', 'unit-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
   list.forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
-  updateToggleButton();
 }
-// The toggle shows the action for the current local state: "Entsperren" when locked, "Sperren" when open.
 function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); return isNaN(v) ? 30 : v; }
 function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 22 : v; }
-function updateToggleButton() {
-  const b = $('btn-toggle'); if (!b) return;
-  b.textContent = speedUnlocked ? t('drosselOn') : t('drosselOff');
-}
-function doSpeedToggle() {
+// Two send-only buttons, NO remembered state: the scooter reports no speed-limit state, so a remembered
+// flag would send the wrong command after a reload/reconnect. Each button always sends its one value.
+function sendDrosselOff() {   // open speed
   if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }
-  if (speedUnlocked) { cmdSetMaxSpeed(ekfvSpeedValue(), false); speedUnlocked = false; }   // open -> lock to eKFV
-  else { cmdSetMaxSpeed(openSpeedValue(), true); speedUnlocked = true; }                    // locked -> unlock to open
-  updateToggleButton();
+  cmdSetMaxSpeed(openSpeedValue(), true);
+}
+function sendDrosselOn() {     // eKFV (road-legal)
+  if (!speedSupported()) { log('this model/firmware has no BLE speed command.', 'log-err'); return; }
+  cmdSetMaxSpeed(ekfvSpeedValue(), false);
 }
 
 // SO4 only: firmware >= 5.2 -> protocol V52 -> AES.
@@ -650,7 +647,6 @@ async function connectGatt(dev) {
     notifyChar.removeEventListener('characteristicvaluechanged', onCharacteristicValue);
     notifyChar.addEventListener('characteristicvaluechanged', onCharacteristicValue);
     connected = true;
-    speedUnlocked = false;   // fresh connect: assume locked, the toggle offers "Entsperren"
     initSent = false;
     fwMajor = null; fwMinor = null;
     so3Secret = 0;
@@ -704,7 +700,6 @@ function afterConnect() {
 function onDisconnected(ev) {
   if (ev && ev.target && ev.target !== device) return;   // ignore a late event from a scooter we already left
   connected = false;
-  speedUnlocked = false;
   clearAcks();
   initSent = false;
   fwMajor = null; fwMinor = null;
@@ -1146,9 +1141,8 @@ function maybeRunDeepAction() {
   const a = pendingDeepAction; pendingDeepAction = null;
   updateShortcutPrompt();   // the action runs now, take the shortcut prompt down
   if (!speedSupported()) { log('shortcut ' + a + ' ignored: this model/firmware has no BLE speed command.', 'log-err'); return; }
-  if (a === 'fast') { const v = openSpeedValue(); log('shortcut: unlock -> ' + v + ' km/h'); cmdSetMaxSpeed(v, true); speedUnlocked = true; }
-  else { const v = ekfvSpeedValue(); log('shortcut: lock -> ' + v + ' km/h (eKFV)'); cmdSetMaxSpeed(v, false); speedUnlocked = false; }
-  updateToggleButton();
+  if (a === 'fast') { const v = openSpeedValue(); log('shortcut: Drossel aus -> ' + v + ' km/h'); cmdSetMaxSpeed(v, true); }
+  else { const v = ekfvSpeedValue(); log('shortcut: Drossel ein -> ' + v + ' km/h (eKFV)'); cmdSetMaxSpeed(v, false); }
 }
 // A ?do=fast / ?do=slow shortcut cannot connect on its own: Web Bluetooth needs a user gesture and
 // iOS (Bluefy) has no getDevices() for a silent reconnect. So when a shortcut is pending we surface one
@@ -1221,7 +1215,6 @@ function applyLang() {
   { const el = $('link-privacy'); if (el) el.href = docFile('PRIVACY'); }
   { const el = $('link-trademarks'); if (el) el.href = docFile('TRADEMARKS'); }
   { const el = $('langs'); if (el) el.setAttribute('aria-label', t('langGroup')); }
-  updateToggleButton();   // the toggle label is dynamic, refresh it after a language switch
   updateShortcutPrompt();   // the shortcut prompt text/label is dynamic too
   { const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     const el = $('btn-theme');
@@ -1417,7 +1410,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if ($('btn-conn').dataset.act === 'disconnect') disconnectBle(); else pickAndConnect();
   });
   { const sel = $('model-in'); if (sel) sel.addEventListener('change', () => setModel(sel.value)); }
-  $('btn-toggle').addEventListener('click', doSpeedToggle);
+  { const b = $('btn-drossel-off'); if (b) b.addEventListener('click', sendDrosselOff); }
+  { const b = $('btn-drossel-on'); if (b) b.addEventListener('click', sendDrosselOn); }
   { const s = $('speed-in'); if (s) s.addEventListener('change', () => { try { localStorage.setItem(LS_SPEED, s.value); } catch (e) {} }); }
   { const e2 = $('ekfv-in'); if (e2) e2.addEventListener('change', () => { try { localStorage.setItem(LS_EKFV, e2.value); } catch (er) {} }); }
   [0, 1, 2].forEach(m => {

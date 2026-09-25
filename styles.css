@@ -9,6 +9,7 @@
   --warn-bg: #FFAA1814; --warn-line: #FFAA1840; --warn-strong: #ffc65a;
   --bad-bg: #FF505014; --bad-line: #FF505040; --bad-strong: #ff8080;
   --bad-line-soft: #3a2030; --warn-line-soft: #3a3020;
+  --accent-bg: #B8F02014; --accent-line: #B8F02040;
   --backdrop: rgba(0,0,0,.72); --shadow: rgba(0,0,0,.5);
   --tx: #6cb6ff; --rx: #e0b25a;
 }
@@ -21,6 +22,7 @@
   color-scheme: light;
   --warn-strong: #7A4300; --bad-strong: #A01818;
   --bad-line-soft: #E0B4B4; --warn-line-soft: #E0CBA4;
+  --accent-bg: #2A6A0014; --accent-line: #2A6A0055;
   --backdrop: rgba(10,13,24,.45); --shadow: rgba(10,13,24,.18);
   --tx: #0b6bcb; --rx: #8a5a00;
 }
@@ -95,6 +97,12 @@ label { color: var(--label); font-size: 12px; text-transform: uppercase; letter-
 .warn b { color: var(--warn-strong); }
 /* Feasibility note: a single card-level honesty banner above the live values. */
 .feasibility { margin: 0; }
+
+/* "Moved to lb-tool-web" notice: a prominent accent-tinted banner above the first card. */
+.banner { background: var(--accent-bg); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent);
+  border-radius: 12px; padding: 13px 15px; margin: 0; color: var(--text); font-size: 13.5px; line-height: 1.5; }
+.banner b { color: var(--accent); }
+.banner a { color: var(--accent); font-weight: 700; }
 
 /* Tuning / lock card: sub-blocks separated by .sep, each with an optional greyed-out reason line. */
 .card h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 700; }

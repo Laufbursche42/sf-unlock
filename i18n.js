@@ -20,6 +20,7 @@ window.I18N = {
     startHintGuide: "Neu hier? In der <a href=\"GUIDE.de.md\" data-doc=\"GUIDE\" data-t=\"footGuide\">Anleitung</a> steht jeder Schritt.",
     expWarn: "Machbarkeitsstudie: Diese Seite zeigt, was das Bluetooth-Protokoll eines SoFlow-E-Scooters technisch möglich macht, sie ist kein fertiges Produkt. Fehlerfreier Betrieb wird nicht versprochen, es gibt keinerlei Gewährleistung. Alles, was du hier tust, tust du auf eigenes Risiko. <a href=\"#\" data-open-disclaimer>Haftungsausschluss lesen</a>. Probleme oder Fehler beim Testen bitte per DM an <a href=\"https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/\" target=\"_blank\" rel=\"noopener\">Laufbursche im escooter-stammtisch</a> oder als <a href=\"https://github.com/Laufbursche42/sf-unlock/issues\" target=\"_blank\" rel=\"noopener\">GitHub-Issue</a> melden.",
     ownDevice: "Nur am eigenen Fahrzeug auf privatem Gelände. Das Anheben der Höchstgeschwindigkeit hebt die Drossel auf, die ABE erlischt und der Betrieb auf öffentlichen Wegen ist dann nicht erlaubt.",
+    movedHint: "Hinweis: Dieses Werkzeug wandert nach <a href=\"https://lb-tool-web.pages.dev/\" target=\"_blank\" rel=\"noopener\">lb-tool-web.pages.dev</a>, das mehrere Roller unter einem Dach bündelt.",
 
     s2Title: "Verbindung",
     modelLabel: "Modell",
@@ -177,6 +178,7 @@ window.I18N = {
     startHintGuide: "New here? Every step is in the <a href=\"GUIDE.en.md\" data-doc=\"GUIDE\" data-t=\"footGuide\">guide</a>.",
     expWarn: "Feasibility study: this page shows what the Bluetooth protocol of a SoFlow scooter makes possible, it is not a finished product. Error-free operation is not promised and there is no warranty of any kind. Whatever you do here, you do at your own risk. <a href=\"#\" data-open-disclaimer>Read the disclaimer</a>. Report problems or errors during testing by DM to <a href=\"https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/\" target=\"_blank\" rel=\"noopener\">Laufbursche on escooter-stammtisch</a> or open a <a href=\"https://github.com/Laufbursche42/sf-unlock/issues\" target=\"_blank\" rel=\"noopener\">GitHub issue</a>.",
     ownDevice: "Only on your own vehicle on private ground. Raising the top speed removes the throttle limit, the road approval lapses and operating it on public roads is then not allowed.",
+    movedHint: "Note: this tool is moving to <a href=\"https://lb-tool-web.pages.dev/\" target=\"_blank\" rel=\"noopener\">lb-tool-web.pages.dev</a>, which brings several scooters under one roof.",
 
     s2Title: "Connection",
     modelLabel: "Model",

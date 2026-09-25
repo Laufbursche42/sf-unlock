@@ -98,11 +98,11 @@ label { color: var(--label); font-size: 12px; text-transform: uppercase; letter-
 /* Feasibility note: a single card-level honesty banner above the live values. */
 .feasibility { margin: 0; }
 
-/* "Moved to lb-tool-web" notice: a prominent accent-tinted banner above the first card. */
-.banner { background: var(--accent-bg); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent);
-  border-radius: 12px; padding: 13px 15px; margin: 0; color: var(--text); font-size: 13.5px; line-height: 1.5; }
-.banner b { color: var(--accent); }
-.banner a { color: var(--accent); font-weight: 700; }
+/* Deprecation banner: red tone, always visible, cannot be dismissed. */
+.sunset-banner { background: var(--bad-bg); border: 1px solid var(--bad-line); border-radius: 10px;
+  padding: 11px 14px; font-size: 12px; line-height: 1.5; color: var(--text); }
+.sunset-banner b { color: var(--bad-strong); }
+.sunset-banner a { color: var(--bad-strong); text-decoration: underline; }
 
 /* Tuning / lock card: sub-blocks separated by .sep, each with an optional greyed-out reason line. */
 .card h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 700; }

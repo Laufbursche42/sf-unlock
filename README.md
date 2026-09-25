@@ -1,5 +1,3 @@
-> 🚨 **This tool is moving.** This repository is **no longer maintained** - please switch to the new tool: **[lb-tool-web.pages.dev](https://lb-tool-web.pages.dev/)**. Trouble switching? Open an [issue on GitHub](https://github.com/Laufbursche42/Laufbursche42/issues/new) or send a [PM on the eScooter-Stammtisch forum](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/).
-
 # Laufbursche SoFlow unlock
 
 A static web page that talks to SoFlow e-scooters over Web Bluetooth. Let the page auto-detect your
@@ -57,8 +55,9 @@ Every model the app knows is covered:
 
 Not every model exposes every function over Bluetooth. Most importantly, **SO6 and SO4 UL have no
 BLE speed command at all** (and neither does an SO4 on old 4.x firmware), so the maximum speed cannot
-be set from this page there. The page hides the controls a model does not support and shows a clear
-note instead.
+be set from this page there. Every control stays visible; one that is not proven-functional for the
+resolved model is **greyed out with a short reason** instead of being hidden, so you can always see the
+model's full surface and why a function is unavailable. Read-out always works.
 
 ## What it does
 
@@ -66,21 +65,31 @@ note instead.
   official app.
 - **Set the maximum speed** (opcode 0xA9 on the SO4 style models). The value is `km/h * 10` as a
   big-endian 16-bit number, and the command itself carries no limit. Not available on SO6, SO4 UL
-  and an SO4 on old 4.x firmware.
+  and an SO4 on old 4.x firmware. Lowering to a legal value (the eKFV limiter, "Drossel ein") is
+  deterministic and stays functional; **raising above the factory throttle ("Drossel aus") is greyed
+  out** because whether the controller actually rides the higher value or clamps it in firmware is not
+  determinable from static analysis (security report finding F3) - it is not silently claimed to work.
 - **Switch the ride mode** between eco, normal and sport.
 - **Lock and unlock the vehicle**. This is the anti-theft immobilizer, not the speed. The exact
   command depends on the model.
 - **Unlock the battery lock** (opcode 0xD5). This frees the removable battery for removal, it is not
-  the speed. Only models that actually carry the command show the card: the So5-class models (SO2, SO5
+  the speed. It is functional on the models that carry the command: the So5-class models (SO2, SO5
   Pro, the SO One family) always, the SO4 and SO myTIER from firmware 5.2, the SO X always. SO3-class
-  and SO6-class models do not have it.
-- **More per-model settings** where the model exposes them: headlight (0xA2), dark mode (0xD6),
-  zero-start (0xA5), unit (0xA7, SO3 0xAB) and the Bluetooth name (0xFF; SO6 sends {04,01} plus, for a
-  long name, {04,02}) on the So5-class models, plus the display indicator light (0xA6) on the SO4 path
-  only. The page shows only the controls a model actually has.
+  and SO6-class models do not have it, so there the button is greyed out with the reason.
+- **More per-model settings**: headlight (0xA2), dark mode (0xD6), zero-start (0xA5) and unit
+  (0xA7, SO3 0xAB) on the So5-class models, plus the display indicator light (0xA6) on the SO4 path
+  only (not on SO4 V51, which has no builder). Every row stays visible; a setting a model cannot do is
+  greyed out with the reason. The Bluetooth-name command (0xFF; SO6 {04,01}/{04,02}) is deliberately
+  not exposed, because renaming drops the scooter out of the official app.
 - **Read the telemetry** the scooter sends back (speed, battery, ride mode, firmware version and
-  more, model dependent) and keep the raw notifications in an on-screen diagnostic log as plain hex.
-  Each command also waits for the scooter's echo and logs whether it was acknowledged.
+  more, model dependent). Read-out always works and is never gated. Each command also waits for the
+  scooter's echo and logs whether it was acknowledged - an echo means the command was accepted, not
+  that a raised value is actually ridden.
+- **Full protocol log** at the bottom (like lb-tool-web): every line timestamped, sent frames (TX) and
+  received frames (RX) as plain hex, newest at the bottom with autoscroll. A **Public Log** toggle
+  (default on) anonymizes device id, MAC, keys and long hex runs so a transcript is safe to share; a
+  **Diag Log** toggle taps every other notify channel raw for troubleshooting. Copy, Clear and Save
+  (.txt) all emit the anonymized text.
 - **Home-screen shortcuts** for speed: one sets the throttle back to 22 km/h, the other restores the
   last value you set. Opened via such a shortcut, the page reconnects to the last scooter without the chooser.
 

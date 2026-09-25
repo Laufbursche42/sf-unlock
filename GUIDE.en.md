@@ -57,71 +57,72 @@ shortcut can skip.
 
 ---
 
-## 4. Set and test the maximum speed
+## 4. Set the maximum speed
 
-Only on models with a BLE speed command (so not SO6 and not SO4 UL).
+Only on models with a BLE speed command (so not SO6 and not SO4 UL). The **Tuning and lock** card has
+two values, **Open** and **eKFV**, and two buttons:
 
-1. Enter the value in km/h in the **Settings** card.
-2. Tap **Set**. The page sends the value to the scooter.
+- **Limiter on** writes the eKFV value (default 22 km/h) as the top speed. Lowering to a legal value is
+  deterministic, so this button is **enabled**.
+- **Limiter off** (raising above the factory value) is deliberately **greyed out**. The reason sits right
+  under the button: whether the controller actually rides a value raised via 0xA9, or clamps it in
+  firmware, cannot be proven from the app alone (security report, finding F3). The scooter does
+  acknowledge the command (the log shows "confirmed"), but "confirmed" means accepted, not ridden. So
+  raising stays disabled until it is proven on a vehicle, to avoid claiming something that is not shown.
 
-The page itself has no upper limit. On a first tester's scooter the controller did ride a raised value
-(30 km/h set, 30 km/h reached). Whether the same holds for your model and firmware is what this test
-clarifies.
-
-**How to test whether the scooter really rides the value:**
-
-1. Find a safe, open spot on private ground, no traffic. Helmet on.
-2. Ride at full throttle briefly and note the km/h at which the scooter caps. That is your baseline.
-3. Set a value slightly above it, for example 2 to 3 km/h more, and tap **Set**.
-4. Ride full throttle again and watch the **Speed** tile. Does it climb past the previous cap? Then
-   the controller accepts the value.
-5. Repeat in small steps. The value at which it stops going higher is the firmware's hard cap.
-6. A high number does not make the scooter faster than the motor and battery allow. It only shows
-   whether the controller accepts it.
-
-Report your result with the copied log (section 12): model, firmware, the value you set and the live
-speed you reached.
+On a first tester's scooter an SO4 did ride a raised value (30 km/h set, 30 km/h reached); for every
+other model it is open. If you want to check on your own vehicle on private ground, watch the **Speed**
+tile at full throttle and report the result with the saved log (section 12): model, firmware, the value
+you set and the live speed you reached.
 
 ---
 
 ## 5. Set the ride mode
 
-Choose eco, normal or sport and tap **Set**. That switches the ride level.
+Tap **eco**, **normal** or **sport** directly in the **Tuning and lock** card. That switches the ride
+level. On the SO3 the mode mapping is unconfirmed per the report (a note sits under the buttons). **SO6
+and SO4 UL** have no ride-mode command, so the buttons are greyed out there.
 
 ---
 
 ## 6. Lock and unlock the vehicle
 
-This is the **anti-theft immobilizer** of the scooter, NOT the speed. Unlock releases the scooter,
-lock immobilizes it. The exact command depends on the model, and the page picks it automatically.
+This is the **anti-theft immobilizer** of the scooter, NOT the speed. The **Tuning and lock** card has
+**Unlock** and **Lock** for it. The exact command depends on the model, and the page picks it
+automatically. Locking only works at standstill; the page refuses to lock while moving, and asks for
+confirmation before locking.
+
+On **SO6 and SO4 UL** both buttons are greyed out: their lock and unlock frames need an undocumented
+session token from the handshake, which is not statically proven.
 
 ---
 
 ## 7. Unlock the battery lock
 
 This releases the lock on the removable battery (anti-theft); it has nothing to do with speed. The
-card only appears for models that actually have the command: SO5 Pro, SO2 Air 2nd gen, SO2 Zero, SO2
-Grover, SO2+ Grover and every SO One variant. On the SO4 and SO myTIER it exists only from firmware 5.2, so the card shows up there only once the
-page has detected that firmware after connecting. The SO X shows it right away, since it is locked to
-protocol V52. SO1, SO2 Air (first gen), SO3, SO5, SO6 and SO4 UL do not have it.
+button is enabled only for models that actually have the command: SO5 Pro, SO2 Air 2nd gen, SO2 Zero,
+SO2 Grover, SO2+ Grover and every SO One variant. On the SO4 and SO myTIER only from firmware 5.2, so
+the button becomes active there only once the page has detected that firmware after connecting. The SO X
+has it right away, since it is locked to protocol V52. On SO1, SO2 Air (first gen), SO3, SO5, SO6 and
+SO4 UL the button is greyed out with the reason. The page asks for confirmation before sending.
 
 ---
 
 ## 8. More settings
 
-Some models offer comfort toggles in the **More settings** card. Only the ones your model actually
-has show up:
+The **Tuning and lock** card has comfort toggles at the bottom. Every row stays visible; a setting your
+model cannot do is greyed out with the reason:
 
 - **Headlight** on or off.
 - **Dark mode** of the display on or off.
 - **Zero-start** (start by kick first or straight from the throttle) on or off.
+- **Indicator light** (the BLE status light), SO4 path only (not on SO4 V51).
 - **Unit** switch between km/h and mph.
-- **Name** of the scooter (the name shown in the Bluetooth chooser).
-- **Indicator light** (the BLE status light), SO4 only.
 
-These are pure comfort settings and have nothing to do with speed. Headlight, dark mode and zero-start are on the So5-class models (SO2, SO5 Pro, SO One). The name can
-be set on those and on the SO6, the unit on those and on the SO3. The indicator light is only on the
-SO4 path (SO4, SO myTIER, SO X).
+These are pure comfort settings and have nothing to do with speed. Headlight, dark mode and zero-start
+are on the So5-class models (SO2, SO5 Pro, SO One), the unit on those and on the SO3, the indicator light
+only on the SO4 path (SO4, SO myTIER, SO X). The page deliberately does not change the Bluetooth name: a
+renamed scooter drops out of the official app.
 
 ---
 
@@ -164,7 +165,10 @@ models with a BLE speed command.
 ## 12. Test cleanly and report
 
 Test on your own device on private ground only. The log at the bottom is a full transcript (model,
-firmware, every byte sent and received). **Copy log** gives you the whole transcript as text.
+firmware, every byte sent and received), newest line at the bottom with autoscroll. **Anonymize log** is
+on by default and redacts the device id, MAC, keys and long hex runs so the transcript is safe to share;
+**Diagnostic log** additionally taps every raw channel (for troubleshooting only). **Copy log**, **Clear
+log** and **Save as .txt** all emit the (anonymized) transcript.
 
 Report problems or successes: by DM to
 [Laufbursche on escooter-stammtisch](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/)
@@ -175,12 +179,13 @@ it is clear what was sent and received.
 
 ## 13. Limits worth knowing
 
-- **SO6 and SO4 UL** have no BLE speed command. The speed cannot be set through this page for them.
-- That the controller rides a value above the factory limit is confirmed in the field on one model
-  (30 set, 30 ridden); confirmation on the other models is still open. The protocol itself comes from
-  static analysis of the app.
-- There is no firmware flashing and no LED control. The SoFlow app does not do firmware updates over
-  Bluetooth.
+- **SO6 and SO4 UL** have no BLE speed command. The speed cannot be set through this page for them, and
+  lock/unlock stays greyed out there too (undocumented session token).
+- That the controller rides a value above the factory limit is confirmed in the field on one SO4
+  (30 set, 30 ridden); confirmation on the other models is still open, which is why **Limiter off**
+  (raising) is greyed out. The protocol itself comes from static analysis of the app.
+- There is no advanced expert/register write surface: the app's admin area uses the same commands. There
+  is no firmware flashing and no LED control; the SoFlow app does not do firmware updates over Bluetooth.
 
 ---
 

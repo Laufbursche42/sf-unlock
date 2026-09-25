@@ -93,13 +93,25 @@ label { color: var(--label); font-size: 12px; text-transform: uppercase; letter-
 .warn { color: var(--warn); font-size: 12px; background: var(--warn-bg); border: 1px solid var(--warn-line);
   border-radius: 8px; padding: 9px 11px; margin: 0; }
 .warn b { color: var(--warn-strong); }
-/* Deprecation banner: red tone, always visible, cannot be dismissed. */
-.sunset-banner { background: var(--bad-bg); border: 1px solid var(--bad-line); border-radius: 10px;
-  padding: 11px 14px; font-size: 12px; line-height: 1.5; color: var(--text); }
-.sunset-banner b { color: var(--bad-strong); }
-.sunset-banner a { color: var(--bad-strong); text-decoration: underline; }
+/* Feasibility note: a single card-level honesty banner above the live values. */
+.feasibility { margin: 0; }
+
+/* Tuning / lock card: sub-blocks separated by .sep, each with an optional greyed-out reason line. */
+.card h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 700; }
+.ctl-block { display: flex; flex-direction: column; gap: 12px; }
+/* A control that is not proven-functional for the resolved model is disabled and explains why. */
+.ctl-reason { color: var(--warn-strong); font-size: 12px; margin: 0; background: var(--warn-bg);
+  border: 1px solid var(--warn-line); border-radius: 8px; padding: 7px 10px; }
+
+/* Log option rows (Public / Diag checkboxes), ported 1:1 from lb-tool-web. */
+.log-opts { display: flex; flex-direction: column; gap: 6px; }
+.log-opt { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 5px; margin: 0; }
+.log-opt > span { color: var(--label); font-size: 13px; }
+.log-opt .help-btn { margin: 0 2px; }
+.log-opt input[type="checkbox"] { -webkit-appearance: checkbox; appearance: auto; width: 16px; height: 16px;
+  margin: 0; padding: 0; border: 0; border-radius: 0; background: none; flex: none; min-width: 0; }
 pre#log { margin: 0; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 10px;
-  font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 220px; overflow: auto;
+  font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 240px; overflow: auto;
   white-space: pre-wrap; word-break: break-word; overscroll-behavior: contain; }
 .log-tx { color: var(--tx); }
 .log-rx { color: var(--rx); }
@@ -168,7 +180,7 @@ dialog::backdrop { background: var(--backdrop); }
   border-top: 1px solid var(--line); }
 .doc-foot button { flex: 0 0 auto; padding: 10px 22px; }
 
-/* Shortcut links (Verknuepfungen) - exakt nach trfm-unlock: vertikaler Stack, URL-Box in --value. */
+/* Shortcut links - same layout as trfm-unlock: vertical stack, URL box in --value. */
 .linkrow { display: flex; flex-direction: column; gap: 5px; }
 .linkrow .lbl { color: var(--label); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 .copy { margin: 0; font-family: var(--mono); font-size: 11.5px; background: var(--field); border: 1px solid var(--line);

@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v46';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v47';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -138,7 +138,7 @@ function buildFrameSO6(group, sub, payload) {
 function speedPayload(kmh) { const v = Math.round(kmh * 10); return [(v >> 8) & 0xff, v & 0xff]; }
 
 // SO3 rolling secret: recomputed from three bytes of every received 0x1D frame (b3, b15, b16).
-// Belegt from So3DataDelegate::_calculateSecret. Result is a 7-bit value.
+// Confirmed from So3DataDelegate::_calculateSecret. Result is a 7-bit value.
 function so3CalcSecret(b3, b15, b16) {
   let t = (b15 ^ b3) ^ (b16 ^ b3);
   t = (((t + 0xCE) & 0xff) ^ 0xB2) & 0xff;
@@ -173,7 +173,7 @@ const CRYPTO_NONE     = { mode: 'never',  key: null,   decryptIncoming: false };
 // command set ('v52' for the SO X, which always runs the newest protocol). so6pin: SO6 unlock carries
 // the 6-byte PIN payload (default 000000).
 // The scan prefixes, transport and crypto are exactly the app's VehicleType._fromName plus the
-// DataDelegate.of routing (belegt from the disassembly). Several marketing models share a data path:
+// DataDelegate.of routing (confirmed from the disassembly). Several marketing models share a data path:
 // SO1 / SO2 Air (1st gen) / SO5 run the SO3 path; SO myTIER runs the SO4 path; SO X runs the SO4 path
 // locked to protocol V52.
 const PROTOCOLS = {
@@ -230,13 +230,13 @@ function protoFor(key) {
   const base = PROTOCOLS[d.proto];
   return Object.assign({}, base, { id: key, baseId: d.proto, name: d.label, prefixes: d.prefixes || base.prefixes });
 }
-// Classify an advertised device name to a base protocol id, 1:1 with VehicleType._fromName (belegt,
+// Classify an advertised device name to a base protocol id, 1:1 with VehicleType._fromName (confirmed,
 // vehicle_type.dart 0x7cb99c, in this exact check order). Returns null for a non-SoFlow name.
 function classifyByName(name) {
   if (!name) return null;
   const n = String(name);
   if (/^(SFSO1|SFSC1|SFS1)/.test(n)) return 'so1';
-  if (/^SFS2K7/.test(n)) {                                   // serial weiche (belegt: substring(7), >=3000000 -> Grover)
+  if (/^SFS2K7/.test(n)) {                                   // serial split (confirmed: substring(7), >=3000000 -> Grover)
     const serial = parseInt(n.substring(7), 10);
     return (Number.isFinite(serial) && serial >= 3000000) ? 'so2grover' : 'so2air2';
   }
@@ -261,7 +261,7 @@ function classifyByName(name) {
 const AUTO_PROTO = { id: 'auto', baseId: null, name: 'auto', family: null, variant: null, prefixes: [], transport: 'nordic', crypto: CRYPTO_NONE, speed: false };
 const DEFAULT_MODEL = 'auto';
 
-const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed', LS_EKFV = 'sfu_ekfv';
+const LS_THEME = 'sfu_theme', LS_DEVICE = 'sfu_device', LS_MODEL = 'sfu_model', LS_SPEED = 'sfu_speed', LS_EKFV = 'sfu_ekfv', LS_PUBLICLOG = 'sfu_publiclog';
 
 // --------------------------- state ---------------------------
 
@@ -293,23 +293,58 @@ function cryptoLabel(p) {
 
 function $(id) { return document.getElementById(id); }
 
-// The log is a full diagnostic transcript. Every line is timestamped and kept in logLines in
-// chronological order so the copy button can hand a tester one clean, paste-ready block. The
-// on-screen order stays newest-first (insertBefore) as before. Log text is technical English ASCII.
-const logLines = [];
+// The log is a full diagnostic transcript, appended newest-at-bottom with autoscroll (parity with
+// lb-tool-web). Each line is stored raw (with \x01 sentinels around sensitive spans) in logBuffer and
+// anonymized on the way to the screen, clipboard or file through one central redaction filter. Log text
+// is technical English ASCII so a transcript stays in one language regardless of the UI language.
+const logBuffer = [];        // { raw, cls }
+let publicLog = true;        // anonymize the log (default on); toggled by the Public Log checkbox
+let logDeviceId = null;      // the connected device id, redacted while Public Log is on
+let diagOn = false;          // diagnostic raw-frame tap (extra notify chars), default off each session
+
 function ts() {
   const d = new Date();
   const p = (n, w) => String(n).padStart(w || 2, '0');
   return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + '.' + p(d.getMilliseconds(), 3);
 }
+// One central redaction filter shared by display/copy/save: device id, MAC, key/token/serial/uid
+// assignments and long hex runs, so a raw key or id never leaves the page while Public Log is on.
+function redact(text) {
+  let s = String(text);
+  if (logDeviceId) s = s.split(logDeviceId).join('[redacted-id]');
+  s = s.replace(/\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b/g, '[redacted-mac]');
+  s = s.replace(/\b(secret|token|key|aes|pwd|password|pin|mac|serial|vin|uid|imei)\b(\s*[:=]\s*)("?)([^\s",]+)\3/gi,
+    (m, k, sep) => k + sep + '[redacted]');
+  s = s.replace(/\b[0-9A-Fa-f]{16,}\b/g, '[redacted-hex]');
+  return s;
+}
+// Mask driver-marked sensitive spans (\x01..\x01) and run the generic redaction, but ONLY when Public
+// Log is on. Off = the full raw line (local debugging only, do not share).
+function anonymize(s) {
+  if (publicLog === false) return s.replace(/\x01/g, '');
+  return redact(s.replace(/\x01[^\x01]*\x01/g, 'XX').replace(/\x01/g, ''));
+}
 function log(m, cls) {
-  const line = '[' + ts() + '] ' + m;
-  logLines.push(line);
-  const el = $('log'); if (!el) return;
-  const span = document.createElement('div');
+  const raw = '[' + ts() + '] ' + m;
+  logBuffer.push({ raw, cls: cls || '' });
+  const pre = $('log'); if (!pre) return;
+  const span = document.createElement('span');
   if (cls) span.className = cls;
-  span.textContent = line;
-  el.insertBefore(span, el.firstChild);
+  span.textContent = anonymize(raw) + '\n';
+  pre.appendChild(span);
+  pre.scrollTop = pre.scrollHeight;   // append newest at the bottom + autoscroll
+}
+// Re-render the whole pane after the Public Log toggle flips.
+function renderLog() {
+  const pre = $('log'); if (!pre) return;
+  pre.textContent = '';
+  logBuffer.forEach(e => {
+    const span = document.createElement('span');
+    if (e.cls) span.className = e.cls;
+    span.textContent = anonymize(e.raw) + '\n';
+    pre.appendChild(span);
+  });
+  pre.scrollTop = pre.scrollHeight;
 }
 function logDiagnosticHeader() {
   const nav = (typeof navigator !== 'undefined') ? navigator : {};
@@ -321,14 +356,27 @@ function logDiagnosticHeader() {
   log('webBluetooth: ' + (nav.bluetooth ? 'yes' : 'no'));
   log('============================');
 }
+function logText() { return logBuffer.map(e => anonymize(e.raw)).join('\n'); }
 async function copyLog() {
-  const text = logLines.join('\n');
+  const text = logText();
   let ok = false;
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); ok = true; }
   } catch (e) { ok = false; }
   if (!ok) ok = copyLogFallback(text);
-  log(ok ? 'log copied (' + logLines.length + ' lines)' : 'log copy failed, please select the log text manually', ok ? 'log-ok' : 'log-err');
+  log(ok ? t('logCopied') + ' (' + logBuffer.length + ' lines)' : 'log copy failed, please select the log text manually', ok ? 'log-ok' : 'log-err');
+}
+function saveLog() {
+  const text = logText();
+  try {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'sf-unlock-log.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    log(t('logSaved'), 'log-ok');
+  } catch (e) { log('save failed: ' + e, 'log-err'); }
 }
 function copyLogFallback(text) {
   try {
@@ -343,21 +391,41 @@ function copyLogFallback(text) {
   } catch (e) { return false; }
 }
 // Help "?" icons: each card can show its explanation in a modal instead of a permanent paragraph.
-const HELP = { enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], battery: ['batTitle', 'batHint'], more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'] };
+const HELP = {
+  enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], battery: ['batTitle', 'batHint'],
+  more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'],
+  publiclog: ['publicLogTitle', 'publicLogHelpHtml'], diaglog: ['diagLogTitle', 'diagLogHelpHtml'],
+};
 function openHelp(key) {
   const m = HELP[key]; if (!m) return;
   const dlg = $('help'); if (!dlg) return;
   const ti = $('help-title'); if (ti) ti.textContent = t(m[0]);
-  const bo = $('help-body'); if (bo) bo.textContent = t(m[1]);
+  const bo = $('help-body');
+  if (bo) { const v = t(m[1]); if (/Html$/.test(m[1])) bo.innerHTML = v; else bo.textContent = v; }   // scan-ok: our own i18n help text
   if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', '');
 }
 function closeHelp() { const dlg = $('help'); if (!dlg) return; if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
 
+// Risk-confirmation dialog for a write the user should double-check (lock, battery unlock). The pending
+// action is held in confirmCb; the OK / Cancel / close buttons are bound once (see init).
+let confirmCb = null;
+function confirmAction(msgKey, onOk) {
+  const dlg = $('confirm'); if (!dlg) { onOk(); return; }   // no dialog in the DOM: run the action directly
+  confirmCb = onOk;
+  const body = $('confirm-body'); if (body) body.textContent = t(msgKey);
+  if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', '');
+}
+function closeConfirm(run) {
+  const dlg = $('confirm'), cb = confirmCb; confirmCb = null;
+  if (dlg) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+  if (run && cb) cb();
+}
+
 function clearLog() {
-  logLines.length = 0;
+  logBuffer.length = 0;
   const el = $('log'); if (el) el.textContent = '';
   logDiagnosticHeader();
-  log('log cleared');
+  log(t('logCleared'));
 }
 function setTile(id, val) { const el = $(id); if (el) el.textContent = (val == null ? '-' : val); }
 const MODE_TILE = ['Eco', 'Normal', 'Sport'];
@@ -381,18 +449,85 @@ function setStatus(s) {
     cb.dataset.act = on ? 'disconnect' : 'connect';
   }
 }
-// Enable controls per model: speed/mode only when the model has a BLE speed command, battery unlock
-// only for the D7 family, lock/unlock for every model.
-function setControlsEnabled(on) {
-  const speedOn = on && activeProto.speed;
-  const batOn = on && activeProto.family === 'D7';
-  const list = [['btn-drossel-off', speedOn], ['btn-drossel-on', speedOn], ['speed-in', speedOn], ['ekfv-in', speedOn],
-   ['btn-mode-0', speedOn], ['btn-mode-1', speedOn], ['btn-mode-2', speedOn],
-   ['btn-bat', batOn]];
-  ['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in', 'btn-ind', 'ind-in',
-   'btn-unit', 'unit-in', 'btn-vlock', 'vlock-in'].forEach(id => list.push([id, on]));
-  list.forEach(([id, en]) => { const el = $(id); if (el) el.disabled = !en; });
+// Live speed from the last telemetry frame, used for the lock-while-moving guard (§16).
+let lastSpeed = 0;
+
+// Show/clear a per-control reason line (greyed-out explanation) under a control block.
+function ctlReason(id, key) {
+  const el = $(id); if (!el) return;
+  if (key) { el.textContent = t(key); el.hidden = false; } else { el.textContent = ''; el.hidden = true; }
 }
+
+// FUNCTIONAL-ONLY-IF-PROVEN gating (proof map: proto-spec / soflow.json). Each control is ENABLED only
+// when connected AND the protocol + report prove the effect for the resolved model; otherwise it renders
+// disabled with a short reason (title/aria-label + a .ctl-reason line). Read-out (telemetry) is never
+// gated here. The two genuine grey-outs are: speed RAISE (0xA9 above factory, controller-honouring is
+// device-dependent, F3) and SO6 / SO4 UL lock/unlock (session token from the {06,01} handshake is not
+// appended, SEND-UNPROVEN). Capability booleans come straight from speedSupported()/batterySupported()/
+// so4Ver() so this never widens what the model actually carries.
+function applyGating() {
+  const p = activeProto;
+  const conn = connected;
+  const so5 = p.family === 'D7' && p.variant === 'so5base';
+  const so4 = p.family === 'D7' && p.variant === 'so4';
+  const so3 = p.family === 'SO3';
+  const so6 = p.family === 'SO6';
+  const v = so4 ? so4Ver() : null;
+  // A protocol is "resolved" once a concrete model is known (not auto-before-classify), so a reason line
+  // only appears when it is actually meaningful.
+  const resolved = modelChosen && !(autoDetect && !activeProto.baseId);
+  const hasSpeed = resolved && speedSupported();
+
+  const setEnabled = (ids, en) => ids.forEach(id => { const el = $(id); if (el) el.disabled = !en; });
+  const setTip = (ids, key) => ids.forEach(id => { const el = $(id); if (el) { if (key) { const s = t(key); el.title = s; el.setAttribute('aria-label', s); } else { el.removeAttribute('title'); } } });
+
+  // Speed inputs + LOWER (limiter on / eKFV): functional where a 0xA9 command exists.
+  setEnabled(['speed-in', 'ekfv-in', 'btn-drossel-on'], conn && hasSpeed);
+  ctlReason('reason-speed', (!resolved || hasSpeed) ? null : (so4 && v === 'v42' ? 'reasonSo4V42' : 'reasonNoBleSpeed'));
+  // RAISE (limiter off): always greyed - controller honouring an above-factory value is device-dependent.
+  setEnabled(['btn-drossel-off'], false);
+  setTip(['btn-drossel-off'], 'reasonSpeedHonor');
+  ctlReason('reason-speedraise', hasSpeed ? 'reasonSpeedHonor' : null);
+
+  // Ride mode: D7 + SO3; greyed on SO6 / SO4 UL. SO3 mapping-uncertain note stays visible.
+  const modeSup = resolved && p.speed;
+  setEnabled(['btn-mode-0', 'btn-mode-1', 'btn-mode-2'], conn && modeSup);
+  setTip(['btn-mode-0', 'btn-mode-1', 'btn-mode-2'], modeSup ? (so3 ? 'reasonSo3Uncertain' : null) : 'reasonRideModeNA');
+  ctlReason('reason-mode', resolved ? (modeSup ? (so3 ? 'reasonSo3Uncertain' : null) : 'reasonRideModeNA') : null);
+
+  // Immobilizer lock/unlock: D7 + SO3; greyed on SO6 / SO4 UL (session token unproven).
+  const immobSup = resolved && !so6;
+  setEnabled(['btn-unlock', 'btn-lock'], conn && immobSup);
+  setTip(['btn-unlock', 'btn-lock'], immobSup ? null : 'reasonSo6Token');
+  ctlReason('reason-immob', (resolved && !immobSup) ? 'reasonSo6Token' : null);
+
+  // Battery unlock 0xD5: so5base + SO4 V52 + SO X.
+  const batSup = resolved && batterySupported();
+  setEnabled(['btn-bat'], conn && batSup);
+  setTip(['btn-bat'], batSup ? null : 'reasonBattery');
+  ctlReason('reason-bat', (resolved && !batSup) ? 'reasonBattery' : null);
+
+  // Front light / dark mode / zero-start: So5 class only.
+  const so5Sup = resolved && so5;
+  setEnabled(['btn-light', 'light-in', 'btn-dark', 'dark-in', 'btn-zero', 'zero-in'], conn && so5Sup);
+  setTip(['btn-light', 'btn-dark', 'btn-zero'], so5Sup ? null : 'reasonSo5Only');
+  ctlReason('reason-so5', (resolved && !so5Sup) ? 'reasonSo5Only' : null);
+
+  // Indicator light: SO4 path V42/V52 (V51 has no builder).
+  const indSup = resolved && so4 && v !== 'v51';
+  const indReason = so4 && v === 'v51' ? 'reasonIndicatorV51' : 'reasonIndicatorSo4';
+  setEnabled(['btn-ind', 'ind-in'], conn && indSup);
+  setTip(['btn-ind'], indSup ? null : indReason);
+  ctlReason('reason-ind', (resolved && !indSup) ? indReason : null);
+
+  // Unit km/h <-> mph: So5 class + SO3.
+  const unitSup = resolved && (so5 || so3);
+  setEnabled(['btn-unit', 'unit-in'], conn && unitSup);
+  setTip(['btn-unit'], unitSup ? null : 'reasonUnit');
+  ctlReason('reason-unit', (resolved && !unitSup) ? 'reasonUnit' : null);
+}
+// Retained for the existing call sites; gating is centralized in applyGating().
+function setControlsEnabled(on) { applyGating(); }
 function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); return isNaN(v) ? 30 : v; }
 function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 22 : v; }
 // Two send-only buttons, NO remembered state: the scooter reports no speed-limit state, so a remembered
@@ -455,29 +590,20 @@ function speedSupported() {
   return true;
 }
 // Battery unlock (0xD5) exists only on the So5ProBase models (always) and on the SO4 path from V52
-// (belegt: batteryUnlock lives on So5ProBaseDataDelegate and So4Protocol V52 only). SO3/SO6 never.
+// (confirmed: batteryUnlock lives on So5ProBaseDataDelegate and So4Protocol V52 only). SO3/SO6 never.
 function batterySupported() {
   if (activeProto.family !== 'D7') return false;
   if (activeProto.variant !== 'so4') return true;     // SO2 / SO5 Pro / SO One family: always
   if (activeProto.so4ver === 'v52') return true;      // SO X: forced V52
   return fwMajor != null && so4Ver() === 'v52';       // SO4 / SO myTIER: only once firmware confirms V52
 }
+// The Tuning / lock and More settings blocks are always shown; each control is greyed with a reason
+// (applyGating) rather than hidden, so a model's full surface is visible even where a function is not
+// proven-functional. Only connect stays gated on a model being chosen.
 function applyModelUi() {
-  const on = modelChosen;
-  const auto = autoDetect && !connected;   // 'auto' picked, no device classified yet -> hide model cards
-  const speedCard = $('speed-card'); if (speedCard) speedCard.hidden = !on || auto || !speedSupported();
-  const batCard = $('bat-card'); if (batCard) batCard.hidden = !on || auto || !batterySupported();
-  const modeCard = $('mode-card'); if (modeCard) modeCard.hidden = !on || auto || !activeProto.speed;
-  const noSpeed = $('nospeed-card'); if (noSpeed) noSpeed.hidden = !on || auto || speedSupported();
-  const caps = (on && !auto) ? modelCaps() : {};
-  const rows = { 'row-vlock': caps.vlock, 'row-light': caps.frontLight, 'row-dark': caps.darkMode, 'row-zero': caps.zeroStart,
-                 'row-ind': caps.indicator, 'row-unit': caps.unit };
-  let anyMore = false;
-  Object.keys(rows).forEach(id => { const el = $(id); if (el) el.hidden = !rows[id]; if (rows[id]) anyMore = true; });
-  const moreCard = $('more-card'); if (moreCard) moreCard.hidden = !anyMore;
-  const sel = $('model-in'); if (sel && on && !autoDetect && sel.value !== activeProto.id) sel.value = activeProto.id;
-  const cb = $('btn-conn'); if (cb && !connected) cb.disabled = !on;
-  setControlsEnabled(connected);
+  const sel = $('model-in'); if (sel && modelChosen && !autoDetect && sel.value !== activeProto.id) sel.value = activeProto.id;
+  const cb = $('btn-conn'); if (cb && !connected) cb.disabled = !modelChosen;
+  applyGating();
   updateEncState();
 }
 function setModel(id, quiet) {
@@ -559,44 +685,59 @@ async function pickAndConnect() {
   }
 }
 
-// Diagnostics: show ALL Bluetooth devices (accept all), so a scooter that does not advertise an
-// "SFS" name still appears. Logs the real name, classifies it, connects and lists the GATT services.
-// This is how we find out why a specific unit (e.g. a newer GT2/Core2) does not connect normally.
-function charProps(c) {
-  const p = c.properties || {};
-  return ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => p[k]).join(',') || '-';
+// --------------------------- diagnostic raw-frame tap ---------------------------
+// Parity with lb-tool-web (base.js _diagTapExtraNotify): while Diag Log is on, tap every OTHER
+// notify/indicate characteristic (the model's own notify char is already logged in onCharacteristicValue)
+// and print its raw RX hex. The tap is protocol-free (format unknown), so bytes are logged as-is;
+// central redaction still applies on the way to screen/copy/save.
+let diagTaps = [];
+function shortUuid(uuid) {
+  const u = String(uuid || '').toLowerCase();
+  const m = u.match(/^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/);
+  if (m) return m[1].toUpperCase();
+  return (u.replace(/[^0-9a-f]/g, '').slice(-4).toUpperCase()) || 'RX';
 }
-async function scanAllDevicesDiagnostic() {
-  if (!navigator.bluetooth) { log('Web Bluetooth not available. Use Bluefy (iOS) or Chrome (Android/desktop).', 'log-err'); return; }
-  let dev = null;
-  try {
-    log('DIAG: showing ALL Bluetooth devices. Pick your scooter, even if the name looks wrong or missing.', 'log-ok');
-    dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ALL_SERVICES });
-  } catch (e) { log('DIAG cancelled: ' + e, 'log-err'); return; }
-  log('DIAG selected: name="' + (dev.name || '(no name)') + '"  id=' + dev.id);
-  const cls = classifyByName(dev.name);
-  log('DIAG classify: ' + (cls ? PROTOCOLS[cls].name + ' (' + cls + ', transport ' + PROTOCOLS[cls].transport + ')'
-      : 'NOT recognized - the advertised name matches no known SFS/QINGZ prefix'), cls ? 'log-ok' : 'log-err');
-  try {
-    log('DIAG: connecting to read the GATT services ...');
-    const srv = await dev.gatt.connect();
-    let svcs = [];
-    try { svcs = await srv.getPrimaryServices(); } catch (e) { log('DIAG getPrimaryServices error: ' + e, 'log-err'); }
-    if (!svcs || !svcs.length) {
-      log('DIAG: none of the known services is present (Nordic 6E40.., KingMeter 4348.., SO6 6000..). This unit uses a service this tool does not know yet.', 'log-err');
-    } else {
-      for (const s of svcs) {
-        log('DIAG service ' + s.uuid, 'log-ok');
-        try { const chs = await s.getCharacteristics(); for (const c of chs) log('DIAG   char ' + c.uuid + '  [' + charProps(c) + ']'); }
-        catch (e) { log('DIAG   (characteristics unreadable: ' + e + ')'); }
-      }
+function onDiagRx(label, ev) {
+  try { const b = new Uint8Array(ev.target.value.buffer); log('RX ' + label + '  ' + bytesToHex(b), 'log-rx'); } catch (e) {}
+}
+async function diagTapExtraNotify() {
+  if (!diagOn || !server) return;
+  const skip = {};
+  if (notifyChar && notifyChar.uuid) skip[String(notifyChar.uuid).toLowerCase()] = true;
+  const have = {}; diagTaps.forEach(tp => { have[tp.uuid] = true; });
+  let services = [];
+  try { services = await server.getPrimaryServices(); } catch (e) { services = []; }
+  for (const svc of services) {
+    let chars = [];
+    try { chars = await svc.getCharacteristics(); } catch (e) { chars = []; }
+    for (const c of chars) {
+      const uuid = String(c.uuid || '').toLowerCase(), pr = c.properties || {};
+      if ((!pr.notify && !pr.indicate) || skip[uuid] || have[uuid]) continue;
+      const label = shortUuid(uuid);
+      const handler = ev => onDiagRx(label, ev);
+      try {
+        c.addEventListener('characteristicvaluechanged', handler);
+        c.startNotifications().catch(() => {});
+        diagTaps.push({ uuid, char: c, handler });
+        have[uuid] = true;
+        log('diag: tapping extra notify ' + label, 'log-rx');
+      } catch (e) {}
     }
-    try { dev.gatt.disconnect(); } catch (e) {}
-    log('DIAG done. Copy the log and send it. For the full picture (name + ALL service UUIDs + manufacturer data) use the nRF Connect app on Android.', 'log-ok');
-  } catch (e) {
-    log('DIAG connect failed: ' + e, 'log-err');
-    log('DIAG: even so, the advertised name above already helps. Send the log.', 'log-err');
   }
+}
+function diagUntap() {
+  diagTaps.forEach(tp => {
+    try { tp.char.removeEventListener('characteristicvaluechanged', tp.handler); } catch (e) {}
+    try { tp.char.stopNotifications().catch(() => {}); } catch (e) {}
+  });
+  diagTaps = [];
+}
+// Toggle the diagnostic tap. On: print a fresh diagnostic header and tap the extra notify chars.
+function setDiag(on) {
+  diagOn = !!on;
+  if (diagOn) { logDiagnosticHeader(); diagTapExtraNotify().catch(() => {}); }
+  else diagUntap();
+  log(diagOn ? t('diagOn') : t('diagOff'), 'log-rx');
 }
 
 // Find the model's service first; if it is missing, look through the other known services and note
@@ -650,6 +791,8 @@ async function connectGatt(dev) {
     initSent = false;
     fwMajor = null; fwMinor = null;
     so3Secret = 0;
+    lastSpeed = 0;
+    logDeviceId = device.id || null;   // redacted in the log while Public Log is on
     setControlsEnabled(true);
     const info = $('devinfo');
     if (info) info.textContent = t('devPrefix') + ' ' + (device.name || '(no name)') + '  -  ' + activeProto.name + ', ' + usedTransport.name + ', notify active.';
@@ -660,6 +803,7 @@ async function connectGatt(dev) {
     log('char  write=' + writeChar.uuid + '  notify=' + notifyChar.uuid, 'log-ok');
     updateEncState();
     applyModelUi();
+    if (diagOn) diagTapExtraNotify().catch(() => {});   // re-tap extra notify chars if diag was left on
     afterConnect();
   } catch (e) {
     setStatus('disconnected');
@@ -701,9 +845,12 @@ function onDisconnected(ev) {
   if (ev && ev.target && ev.target !== device) return;   // ignore a late event from a scooter we already left
   connected = false;
   clearAcks();
+  diagUntap();
   initSent = false;
   fwMajor = null; fwMinor = null;
   so3Secret = 0;
+  lastSpeed = 0;
+  logDeviceId = null;
   if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
   setStatus('disconnected');
   const cb = $('btn-conn'); if (cb) cb.disabled = !modelChosen;
@@ -733,6 +880,9 @@ function disconnectBle() {
   device = null; server = null; writeChar = null; notifyChar = null;   // no stale handles into the next connection
   connected = false;
   clearAcks();
+  diagUntap();
+  lastSpeed = 0;
+  logDeviceId = null;
   if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; }
   setStatus('disconnected');
   setControlsEnabled(false);
@@ -753,7 +903,7 @@ function onCharacteristicValue(ev) {
 // KingMeter-transport SoFlow units (SO One Pro and the branded SO4 Pro GT2 / Core2) send every
 // inbound frame - both the command echo and the realtime telemetry - with 0xD5 as the start byte
 // instead of 0xD7. The rest of the frame (LEN, OPCODE, byte 3, payload, additive checksum) is
-// byte-for-byte the same. belegt from a GT2/Core2 log: the echo of a set-max-speed command comes
+// byte-for-byte the same. confirmed from a GT2/Core2 log: the echo of a set-max-speed command comes
 // back as "D5 07 A9 ..." with a valid checksum, and the realtime frames "D5 1C 1D ..." decode
 // cleanly with the So5ProBase reader. So accept both start bytes; without this the tool threw every
 // GT2/Core2 frame away, which is why their live values stayed empty and every command was falsely
@@ -776,7 +926,7 @@ function handleFrame(b) {
   // D7 family
   if (activeProto.variant === 'so4') {
     // Firmware version: byte 12, high nibble major, low nibble minor. Same byte the app reads for
-    // the protocol choice (plaintext vs V52 AES). belegt.
+    // the protocol choice (plaintext vs V52 AES). confirmed.
     if (b.length > 12) {
       const major = b[12] >> 4, minor = b[12] & 0x0f;
       if (major > 0 && major < 15) applyDetectedVersion(major, minor);
@@ -831,7 +981,7 @@ function decodeRealtimeSo4(b) {
   const unit = (st & 0x10) ? 'imperial' : 'metric';
   const locked = (st & 0x80) ? 'locked' : 'unlocked';
   const headlight = (st & 0x01) ? 'on' : 'off';
-  const speed = ((b[5] << 8) | b[6]) / 10;
+  const speed = ((b[5] << 8) | b[6]) / 10; lastSpeed = speed;
   const voltage = ((b[7] << 8) | b[8]) / 10;
   const current = ((b[9] << 8) | b[10]) / 10;
   const errCode = b[11];
@@ -868,7 +1018,7 @@ function decodeRealtimeSo5(b) {
   const unit = (st & 0x10) ? 'imperial' : 'metric';
   const locked = (st & 0x80) ? 'locked' : 'unlocked';
   const headlight = (st & 0x01) ? 'on' : 'off';
-  const speed = ((b[5] << 8) | b[6]) / 10;
+  const speed = ((b[5] << 8) | b[6]) / 10; lastSpeed = speed;
   const voltage = ((b[7] << 8) | b[8]) / 10;
   const current = ((b[9] << 8) | b[10]) / 10;
   const parts = ['speed=' + speed.toFixed(1) + 'km/h', 'mode=' + modeCode, locked, 'unit=' + unit,
@@ -899,16 +1049,19 @@ function decodeSo3Realtime(b) {
   const st = b[4];
   const modeCode = (st >> 1) & 0x07;
   const unit = (st & 0x10) ? 'imperial' : 'metric';
-  const speed = ((b[5] << 8) | b[6]) / 10;
+  const speed = ((b[5] << 8) | b[6]) / 10; lastSpeed = speed;
   const voltage = ((b[7] << 8) | b[8]) / 10;
   const current = ((b[9] << 8) | b[10]) / 10;
   const parts = ['speed=' + speed.toFixed(1) + 'km/h', 'mode=' + modeCode + ' (MessedUp mapping, decode uncertain)',
     'unit=' + unit, voltage.toFixed(1) + 'V', current.toFixed(1) + 'A'];
-  if (b.length >= 15) { const power = ((b[11] << 8) | b[12]) / 10, energy = ((b[13] << 8) | b[14]) / 10; parts.push('power=' + power.toFixed(1) + 'W', 'energy=' + energy.toFixed(1) + 'Wh'); }
+  let power = null;
+  if (b.length >= 15) { power = ((b[11] << 8) | b[12]) / 10; const energy = ((b[13] << 8) | b[14]) / 10; parts.push('power=' + power.toFixed(1) + 'W', 'energy=' + energy.toFixed(1) + 'Wh'); }
   setTile('t-speed', speed.toFixed(1) + ' km/h');
   setTile('t-mode', modeTile(modeCode));
   setActiveMode(modeCode);
   setTile('t-volt', voltage.toFixed(1) + ' V');
+  setTile('t-curr', current.toFixed(1) + ' A');                       // SO3 current is proven (proto-spec §3)
+  if (power != null) setTile('t-power', power.toFixed(1) + ' W');     // SO3 power is proven (len >= 15)
   log('  SO3 0x1D: ' + parts.join(' '), 'log-ok');
 }
 
@@ -926,7 +1079,7 @@ function decodeSo3Status2(b) {
 
 // SO6 family: decrypt first (if the model encrypts both ways), then read the command echo and, for a
 // {05,46} realtime answer, the best-effort electrical values. Marked partial - byte-to-field mapping
-// is only partly belegt and should be checked on a real unit.
+// is only partly confirmed and should be checked on a real unit.
 function handleFrameSO6(b) {
   let data = b;
   if (activeProto.crypto.decryptIncoming && encActive() && encKey()) {
@@ -945,12 +1098,12 @@ function handleFrameSO6(b) {
 function decodeRealtimeSo6(d) {
   if (d.length < 5) { log('  SO6 realtime: too short to decode.'); return; }
   const be = i => (d[i] << 8) | d[i + 1];
-  const parts = ['voltage=' + (be(3) / 10).toFixed(1) + 'V (belegt)'];
+  const parts = ['voltage=' + (be(3) / 10).toFixed(1) + 'V (confirmed)'];
   if (d.length >= 7) parts.push('current=' + (be(5) / 10).toFixed(1) + 'A');
   if (d.length >= 9) parts.push('power=' + (be(7) / 10).toFixed(1) + 'W');
   if (d.length >= 11) parts.push('val4=' + (be(9) / 10).toFixed(1));
   if (d.length >= 14) parts.push('raw[11..13]=' + bytesToHex(d.subarray(11, 14)));
-  log('  SO6 realtime (partial, voltage/current/power belegt): ' + parts.join(' '), 'log-ok');
+  log('  SO6 realtime (partial, voltage/current/power confirmed): ' + parts.join(' '), 'log-ok');
   setTile('t-volt', (be(3) / 10).toFixed(1) + ' V');
   if (d.length >= 7) setTile('t-curr', (be(5) / 10).toFixed(1) + ' A');
   if (d.length >= 9) setTile('t-power', (be(7) / 10).toFixed(1) + ' W');
@@ -1029,7 +1182,7 @@ async function transmit(plain, label, ackKey) {
   }
 }
 
-// getSpeedCode is the identity on SO4 and So5ProBase (belegt: eco 0, normal 1, sport 2). On old SO4
+// getSpeedCode is the identity on SO4 and So5ProBase (confirmed: eco 0, normal 1, sport 2). On old SO4
 // firmware (V42/V51) the mode/lock/unlock/indicator payload packs (code<<1)|lowBit into byte 0; V52
 // uses clean single-purpose commands. currentMode tracks the last ride mode for that byte 0.
 let currentMode = 1;   // normal
@@ -1065,10 +1218,12 @@ function cmdUnlock() {
   }
 }
 function cmdLock() {
+  // Lock-while-moving guard (§16 LockWhileMovingException): refuse while the last telemetry shows motion.
+  if (lastSpeed > 0.5) { log('refused: ' + t('reasonLockMoving') + ' (last speed ' + lastSpeed.toFixed(1) + ' km/h).', 'log-err'); return; }
   if (activeProto.family === 'SO6') {
     transmit(buildFrameSO6(0x05, 0x0C, [0x01]), 'lock {05,0C}', 'so6:5:12');
   } else if (activeProto.family === 'SO3') {
-    transmit(buildFrameD7(0xA2, [0x00, 0x02], so3Secret), 'lock 0xA2 [00,02]', 'op:' + 0xA2);   // belegt: SO3 lock = [00,02]
+    transmit(buildFrameD7(0xA2, [0x00, 0x02], so3Secret), 'lock 0xA2 [00,02]', 'op:' + 0xA2);   // confirmed: SO3 lock = [00,02]
   } else if (activeProto.variant === 'so4' && so4Ver() !== 'v52') {
     transmit(buildFrameD7(0xA0, [so4ModeByte0(1), 0x01], 0x00), 'lock 0xA0 (SO4 ' + so4Ver() + ')', 'op:' + 0xA0);
   } else {
@@ -1085,26 +1240,15 @@ function cmdBatteryUnlock() {
   }
 }
 
-// Extra settings that only some families expose. Opcodes belegt in the analysis: front light 0xA2,
+// Extra settings that only some families expose. Opcodes confirmed in the analysis: front light 0xA2,
 // dark mode 0xD6, zero-start 0xA5, unit 0xA7 (SO3 0xAB), name 0xFF (SO6 {04,01}), indicator 0xA6.
-// front light / dark mode / zero-start / unit are So5ProBase only (SO5 Pro, SO2, SO One); the indicator light (setBleIndicatorLight) is on the SO4 path only; unit also on SO3.
+// front light / dark mode / zero-start / unit are So5ProBase only (SO5 Pro, SO2, SO One); the indicator
+// light (setBleIndicatorLight) is on the SO4 path only; unit also on SO3. Which control is functional vs.
+// greyed is decided in applyGating() from speedSupported()/batterySupported()/so4Ver() + the family flags.
 // The BLE-name command (setName 0xFF / SO6 {04,01}) is deliberately NOT exposed: the SoFlow app lists
 // a scooter only when its advertised name still matches the model regex (VehicleType._fromName, e.g.
 // (SFSOP|SFSGT|SFSRE).* for the SO One Pro / Core2). A renamed scooter drops out of the app entirely,
 // so we do not offer a way to rename from here.
-// modelCaps() decides which control a model shows.
-function modelCaps() {
-  const p = activeProto;
-  const so5 = (p.family === 'D7' && p.variant === 'so5base');
-  return {
-    vlock:      true,                     // the immobilizer (lock/unlock) exists on every family (belegt)
-    indicator:  (p.variant === 'so4'),   // setBleIndicatorLight exists only on the SO4 path (belegt)
-    frontLight: so5,
-    darkMode:   so5,
-    zeroStart:  so5,
-    unit:       so5 || (p.family === 'SO3'),
-  };
-}
 function b01(on) { return on ? 0x01 : 0x00; }
 function cmdFrontLight(on) { transmit(buildFrameD7(0xA2, [b01(on)], 0x00), 'front light ' + (on ? 'on' : 'off') + ' 0xA2', 'op:' + 0xA2); }
 function cmdDarkMode(on)   { transmit(buildFrameD7(0xD6, [on ? 0x00 : 0x01], 0x00), 'dark mode ' + (on ? 'on' : 'off') + ' 0xD6', 'op:' + 0xD6); }   // wire is inverted: dark mode on = 0x00
@@ -1115,7 +1259,7 @@ function cmdIndicator(on)  {
   transmit(buildFrameD7(0xA6, [b01(on)], 0x00), 'indicator light ' + (on ? 'on' : 'off') + ' 0xA6', 'op:' + 0xA6);
 }
 function cmdSetUnit(imperial) {
-  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, imperial ? 0x02 : 0x00], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);   // belegt: imperial=[00,02], metric=[00,00]
+  if (activeProto.family === 'SO3') transmit(buildFrameD7(0xAB, [0x00, imperial ? 0x02 : 0x00], so3Secret), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xAB', 'op:' + 0xAB);   // confirmed: imperial=[00,02], metric=[00,00]
   else transmit(buildFrameD7(0xA7, [b01(imperial)], 0x00), 'unit ' + (imperial ? 'mph' : 'km/h') + ' 0xA7', 'op:' + 0xA7);
 }
 // The BLE-name command (setName) is intentionally not exposed in this tool. Renaming a scooter makes
@@ -1140,9 +1284,23 @@ function maybeRunDeepAction() {
   if (!pendingDeepAction || !connected) return;
   const a = pendingDeepAction; pendingDeepAction = null;
   updateShortcutPrompt();   // the action runs now, take the shortcut prompt down
-  if (!speedSupported()) { log('shortcut ' + a + ' ignored: this model/firmware has no BLE speed command.', 'log-err'); return; }
-  if (a === 'fast') { const v = openSpeedValue(); log('shortcut: Drossel aus -> ' + v + ' km/h'); cmdSetMaxSpeed(v, true); }
-  else { const v = ekfvSpeedValue(); log('shortcut: Drossel ein -> ' + v + ' km/h (eKFV)'); cmdSetMaxSpeed(v, false); }
+  // Route the shortcut through the SAME gate as the matching on-page control, never around it: 'fast' is
+  // the RAISE / limiter-off button (btn-drossel-off, always greyed - controller honouring is
+  // device-dependent), 'slow' is the LOWER / eKFV button (btn-drossel-on). applyGating() sets each
+  // button's disabled state for the connected model/firmware; if that control is greyed the shortcut
+  // refuses with the same inline reason and sends nothing. A shortcut only writes when its button is
+  // enabled, and then via the very handler the click uses.
+  applyGating();
+  const map = (a === 'fast')
+    ? { btn: 'btn-drossel-off', reason: 'reason-speedraise', run: sendDrosselOff, key: 'reasonSpeedHonor' }
+    : { btn: 'btn-drossel-on',  reason: 'reason-speed',      run: sendDrosselOn,  key: 'reasonNoBleSpeed' };
+  const btn = $(map.btn), rEl = $(map.reason);
+  if (!btn || btn.disabled) {
+    const why = (rEl && rEl.textContent) || (btn && btn.title) || t(map.key);
+    log('shortcut ' + a + ' refused: this control is greyed here - ' + why, 'log-err');
+    return;
+  }
+  map.run();
 }
 // A ?do=fast / ?do=slow shortcut cannot connect on its own: Web Bluetooth needs a user gesture and
 // iOS (Bluefy) has no getDevices() for a silent reconnect. So when a shortcut is pending we surface one
@@ -1223,6 +1381,7 @@ function applyLang() {
   document.querySelectorAll('#langs button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.lang === lang)); });
   { const el = $('status'); setStatus(el ? el.dataset.state : 'disconnected'); }
   updateEncState();
+  applyGating();   // ctl-reason lines carry no data-t, so re-render them in the new language
 }
 function initLangSwitch() {
   document.querySelectorAll('#langs button').forEach(b => {
@@ -1418,8 +1577,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const b = $('btn-mode-' + m);
     if (b) b.addEventListener('click', () => { setActiveMode(m); cmdSetSpeedMode(m); });
   });
-  { const b = $('btn-vlock'); if (b) b.addEventListener('click', () => ($('vlock-in').value === '1' ? cmdLock() : cmdUnlock())); }
-  $('btn-bat').addEventListener('click', cmdBatteryUnlock);
+  { const b = $('btn-unlock'); if (b) b.addEventListener('click', cmdUnlock); }
+  { const b = $('btn-lock'); if (b) b.addEventListener('click', () => confirmAction('confirmLock', cmdLock)); }
+  { const b = $('btn-bat'); if (b) b.addEventListener('click', () => confirmAction('confirmBattery', cmdBatteryUnlock)); }
   { const b = $('btn-light'); if (b) b.addEventListener('click', () => cmdFrontLight($('light-in').value === '1')); }
   { const b = $('btn-dark');  if (b) b.addEventListener('click', () => cmdDarkMode($('dark-in').value === '1')); }
   { const b = $('btn-zero');  if (b) b.addEventListener('click', () => cmdZeroStart($('zero-in').value === '1')); }
@@ -1427,8 +1587,19 @@ window.addEventListener('DOMContentLoaded', () => {
   { const b = $('btn-unit');  if (b) b.addEventListener('click', () => cmdSetUnit($('unit-in').value === '1')); }
   { const b = $('btn-shortcut'); if (b) b.addEventListener('click', runShortcutButton); }
   { const b = $('btn-copy-log'); if (b) b.addEventListener('click', copyLog); }
-  { const b = $('btn-diag'); if (b) b.addEventListener('click', scanAllDevicesDiagnostic); }
+  { const b = $('btn-save-log'); if (b) b.addEventListener('click', saveLog); }
   { const b = $('btn-clear-log'); if (b) b.addEventListener('click', clearLog); }
+  // confirm dialog buttons (bound once; the pending action lives in confirmCb)
+  { const b = $('confirm-ok'); if (b) b.addEventListener('click', () => closeConfirm(true)); }
+  { const b = $('confirm-cancel'); if (b) b.addEventListener('click', () => closeConfirm(false)); }
+  { const b = $('confirm-x'); if (b) b.addEventListener('click', () => closeConfirm(false)); }
+  // log option checkboxes: Public Log (anonymize, default on, remembered) + Diag Log (raw tap, off per session)
+  { const pub = $('public-log'); if (pub) {
+      try { publicLog = localStorage.getItem(LS_PUBLICLOG) !== '0'; } catch (e) { publicLog = true; }
+      pub.checked = publicLog;
+      pub.addEventListener('change', () => { publicLog = pub.checked; try { localStorage.setItem(LS_PUBLICLOG, pub.checked ? '1' : '0'); } catch (e) {} renderLog(); });
+  } }
+  { const dg = $('diag-log'); if (dg) { dg.checked = false; dg.addEventListener('change', () => setDiag(dg.checked)); } }
 
   setControlsEnabled(false);
   updateEncState();

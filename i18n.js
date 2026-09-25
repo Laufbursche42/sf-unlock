@@ -1,11 +1,10 @@
 'use strict';
 
-// Jede sichtbare Zeichenkette der Seite, in beiden Sprachen. Die Schlüssel passen zu den
-// data-t-Attributen in index.html und zu den t()-Aufrufen in app.js, sodass ein fehlender
-// Eintrag als leeres Element auffällt statt still auf die andere Sprache zu fallen.
-// Deutsch ist die Voreinstellung; der Umschalter sitzt im Kopf.
+// Every visible string of the page, in both languages. The keys match the data-t attributes in
+// index.html and the t() calls in app.js, so a missing entry shows up as an empty element instead of
+// silently falling back to the other language. German is the default; the switch sits in the header.
 //
-// Das Log bleibt technisch und englisch (ASCII), damit ein Mitschnitt in einer Sprache bleibt.
+// The log stays technical and English (ASCII) so a transcript stays in one language.
 window.I18N = {
   de: {
     pageTitle: "Laufbursche SoFlow Tool",
@@ -29,7 +28,9 @@ window.I18N = {
     modelHint: "Am einfachsten lässt du dein Modell automatisch erkennen. Die Seite sucht dann alle SoFlow-E-Scooter und stellt das Protokoll anhand des Gerätenamens ein, genau wie die Hersteller-App. Alternativ wählst du dein Modell selbst aus der Liste.",
     btnConnect: "Verbinden",
     btnDisconnect: "Trennen",
-    controlsHint: "Nach dem Verbinden findest du in der Karte Einstellungen den Knopf Entsperren beziehungsweise Sperren. Web Bluetooth geht auf dem iPhone nur über die App Bluefy, auf Android oder Desktop über Chrome oder Edge.",
+    controlsHint: "Nach dem Verbinden findest du in der Karte Tuning und Schloss den Knopf Entsperren beziehungsweise Sperren. Web Bluetooth geht auf dem iPhone nur über die App Bluefy, auf Android oder Desktop über Chrome oder Edge.",
+
+    feasibilityNote: "Machbarkeitsstudie: Das Protokoll wurde aus der App rekonstruiert, aber noch nicht am Fahrzeug zertifiziert. Auslesen funktioniert immer. Schreibbefehle sind nur dort aktiv, wo der Report sie belegt; nicht belegte Funktionen sind ausgegraut und nennen den Grund.",
 
     liveTitle: "Live-Werte vom Scooter",
     tileSpeed: "Geschwindigkeit",
@@ -47,32 +48,29 @@ window.I18N = {
     valUnlocked: "offen",
     liveHint: "Die Live-Werte kommen direkt vom Scooter. Nicht jedes Modell liefert jedes Feld, dann steht dort ein Strich. Die rohen Meldungen stehen zusätzlich als Hex im Log.",
 
+    tuneTitle: "Tuning und Schloss",
     s3Title: "eKFV Drossel",
     lblOpen: "Offen (km/h)",
     lblEkfv: "eKFV (km/h)",
     speedValuesHint: "\"Drossel aus\" schreibt den offenen Wert, \"Drossel ein\" den eKFV-Wert (Standard 22 km/h, also 20 plus 10 Prozent Toleranz). Zehntel sind erlaubt, zum Beispiel 22.4. Beide Werte merkt sich der Browser auf diesem Gerät.",
-    lblMode: "Fahrmodus",
+    settingsHint: "Zwei Werte, offen und eKFV. \"Drossel ein\" schreibt den eKFV-Wert deterministisch als Höchstgeschwindigkeit. \"Drossel aus\" (Anheben) ist ausgegraut, weil statisch nicht belegt ist, ob der Controller den höheren Wert wirklich fährt.",
+    modeTitle: "Fahrmodus",
     modeEco: "eco",
     modeNormal: "normal",
     modeSport: "sport",
-    btnSetMode: "Setzen",
-    settingsHint: "Zwei Werte, offen und eKFV. Der Knopf Entsperren/Sperren schreibt den jeweiligen Wert als Höchstgeschwindigkeit an den Scooter. Ob der Controller hohe Werte wirklich fährt, zeigt der Test am Fahrzeug.",
-    modeTitle: "Fahrmodus",
 
-    noSpeedTitle: "Kein Speed per Bluetooth",
-    noSpeedHint: "Dieses Modell (SO6 beziehungsweise SO4 UL) kann die Höchstgeschwindigkeit nicht über Bluetooth setzen. Sperren und Entsperren gehen weiterhin.",
-
+    immobTitle: "Diebstahlschutz",
     btnUnlock: "Entsperren",
     btnLock: "Sperren",
     drosselOff: "Drossel aus",
     drosselOn: "Drossel ein",
-    lblVlock: "Diebstahlschutz",
 
     batTitle: "Akku entsperren",
     btnBat: "Akku entsperren",
+    batHint: "Löst das Schloss des herausnehmbaren Akkus (Diebstahlschutz). Hat nichts mit der Geschwindigkeit zu tun.",
 
     moreTitle: "Weitere Einstellungen",
-    moreHint: "Zusätzliche Funktionen, die dein Modell unterstützt: Diebstahlschutz, Scheinwerfer, Dunkelmodus, Zero-Start, Einheit, Anzeigelicht und der Bluetooth-Name. Es erscheint nur, was dein Modell kann.",
+    moreHint: "Zusätzliche Funktionen, je nach Modell: Scheinwerfer, Dunkelmodus, Zero-Start, Anzeigelicht und Einheit. Funktionen, die dein Modell nicht kann, sind ausgegraut und nennen den Grund.",
     lblLight: "Scheinwerfer",
     lblDark: "Dunkelmodus",
     lblZero: "Zero-Start",
@@ -83,7 +81,22 @@ window.I18N = {
     optKm: "km/h (metrisch)",
     optMi: "mph (imperial)",
     btnSend: "Senden",
-    batHint: "Löst das Schloss des herausnehmbaren Akkus (Diebstahlschutz). Hat nichts mit der Geschwindigkeit zu tun.",
+
+    advTitle: "Erweiterte Einstellungen",
+    advNote: "SoFlow bietet keine Experten- oder Register-Schreibfläche. Der Admin-/Service-Bereich der App setzt über Bluetooth dieselben Befehle (0xA9 / 0xA3 / 0xA0), also nichts Zusätzliches, und braucht kein Konto. Die Nachfrage-Konfiguration nach dem Verbinden (Werte 40 / maxCapableSpeed) ist im Report nicht rekonstruiert und wird bewusst nicht nachgebaut. Es gibt kein OTA/Firmware-Flashen über diesen Weg.",
+
+    reasonSpeedHonor: "Ob der Controller eine über 0xA9 angehobene Höchstgeschwindigkeit wirklich fährt oder in der Firmware begrenzt, ist statisch nicht belegt (Report F3).",
+    reasonNoBleSpeed: "SO6 / SO4 UL haben kein BLE-Speed-Kommando.",
+    reasonSo4V42: "SO4 mit Firmware 4.x hat kein 0xA9.",
+    reasonRideModeNA: "Auf dieser Familie (SO6 / SO4 UL) nicht unterstützt.",
+    reasonLockMoving: "Sperren während der Fahrt nicht möglich (Report / §16).",
+    reasonSo6Token: "SO6-Sperren/Entsperren braucht ein nicht dokumentiertes Session-Token aus dem Handshake (unbelegt).",
+    reasonBattery: "0xD5 nur auf So5-Klasse; SO4 erst ab Firmware 5.2; SO3/SO6 haben es nicht.",
+    reasonSo5Only: "Nur auf der So5-Klasse verfügbar.",
+    reasonIndicatorSo4: "Nur auf dem SO4-Pfad.",
+    reasonIndicatorV51: "SO4 V51 hat keinen Indicator-Befehl.",
+    reasonUnit: "Nur So5-Klasse und SO3.",
+    reasonSo3Uncertain: "Hinweis: SO3-Modus/Einheit-Zuordnung ist unbestätigt.",
 
     encTitle: "Verschlüsselung",
     encStatePrefix: "Aktiv:",
@@ -98,16 +111,31 @@ window.I18N = {
     scGoSlow: "Jetzt drosseln",
     scNoBt: "Dieser Browser kann kein Bluetooth. Öffne den Link auf dem iPhone in Bluefy, auf Android in Chrome. In Safari geht es nicht.",
     shortcutIos: "iOS (Bluefy): lege dir eine Verknüpfung auf diese Adresse an.",
-    shortcutAndroid: "Android (Chrome): eine Verknüpfung auf dem Startbildschirm auf diese Adresse.",
     shortcutNote: "Beim Öffnen über eine solche Verknüpfung erscheint oben ein großer Knopf. Tippe ihn in Bluefy einmal an und wähle deinen Scooter, dann setzt die Seite die Geschwindigkeit. Entsperren setzt den offenen Wert, Sperren den eKFV-Wert. Der Scooter muss an sein und in Reichweite. Nur für Modelle, die die Geschwindigkeit über Bluetooth setzen können.",
 
     s6Title: "Protokoll-Log",
+    publicLogLabel: "Log anonymisieren zum öffentlichen Teilen",
+    publicLogTitle: "Log anonymisieren",
+    publicLogHelpHtml: "<p>Wenn dies aktiv ist (Standard), wird das Protokoll anonymisiert: Bluetooth-/MAC-Adressen, Seriennummern, Schlüssel/Token und rohe Geräte-IDs werden geschwärzt. So kannst du das Log gefahrlos auf GitHub posten oder zur Fehlersuche teilen.</p><p>Nur ausschalten, wenn du das ungekürzte Protokoll <b>lokal</b> für dich selbst brauchst - dann bitte nicht öffentlich teilen.</p>",
+    diagLogLabel: "Diagnose-Log (alles roh mitschneiden)",
+    diagLogTitle: "Diagnose-Log",
+    diagLogHelpHtml: "<p>Zeichnet zusätzlich jedes rohe Frame auf, auch die sonst verworfenen, plus weitere Notify-Kanäle. Nur zur Fehlersuche.</p><p>Beim Einschalten wird ein Diagnose-Kopf (Build, Browser, Plattform) ausgegeben. Prüfe das Log vor dem Teilen selbst.</p>",
     btnCopyLog: "Log kopieren",
     btnClearLog: "Log leeren",
-    btnDiag: "Diagnose: alle Geräte",
-    diagHint: "Zeigt alle Bluetooth-Geräte an (nicht nur SFS), liest den echten Namen aus, ordnet ihn ein und listet nach dem Verbinden die GATT-Dienste. Für Modelle, die sonst nicht auftauchen. Danach den Log kopieren und schicken.",
+    btnSaveLog: "Als .txt speichern",
+    diagOn: "Diagnose-Log an: alle Frames werden roh geloggt.",
+    diagOff: "Diagnose-Log aus.",
+    logCleared: "Protokoll geleert.",
+    logCopied: "Protokoll in die Zwischenablage kopiert.",
+    logSaved: "Protokoll als Datei gespeichert.",
     logTxLegend: "TX / blau = gesendet",
     logRxLegend: "RX / braun = empfangen",
+
+    confirmTitle: "Bist du sicher?",
+    confirmCancel: "Abbrechen",
+    confirmYes: "Ja, senden",
+    confirmBattery: "Das Akkuschloss wird per Bluetooth entsperrt. Nur am eigenen Fahrzeug. Fortfahren?",
+    confirmLock: "Das Fahrzeug wird per Bluetooth gesperrt. Nur bei Stillstand und am eigenen Fahrzeug. Fortfahren?",
 
     footGuide: "Anleitung",
     footDisclaimer: "Haftungsausschluss",
@@ -119,7 +147,6 @@ window.I18N = {
     footTrademarks: "Marken",
     buildLabel: "Build",
     docClose: "Schließen",
-    sunsetBannerHtml: "<b>Dieses Tool zieht um.</b> Dieses Repo wird <b>nicht mehr weiterentwickelt</b> - bitte wechsle zum neuen Tool: <a href=\"https://lb-tool-web.pages.dev/\" target=\"_blank\" rel=\"noopener\">lb-tool-web.pages.dev</a>. Probleme beim Wechsel? Öffne ein <a href=\"https://github.com/Laufbursche42/Laufbursche42/issues/new\" target=\"_blank\" rel=\"noopener\">Issue auf GitHub</a> oder schick eine <a href=\"https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/\" target=\"_blank\" rel=\"noopener\">PN im eScooter-Stammtisch</a>.",
     docLoading: "wird geladen ...",
     docFail: "Das Dokument konnte nicht geladen werden.",
     docEnglish: "(englisch)",
@@ -158,7 +185,9 @@ window.I18N = {
     modelHint: "The easiest way is auto detect: the page scans all SoFlow scooters and picks the protocol from the device name, exactly like the manufacturer app. Or pick your model from the list yourself.",
     btnConnect: "Connect",
     btnDisconnect: "Disconnect",
-    controlsHint: "After connecting, the Unlock/Lock button is in the Settings card. Web Bluetooth only works through the Bluefy app on iPhone; on Android or desktop use Chrome or Edge.",
+    controlsHint: "After connecting, the Unlock/Lock buttons are in the Tuning and lock card. Web Bluetooth only works through the Bluefy app on iPhone; on Android or desktop use Chrome or Edge.",
+
+    feasibilityNote: "Feasibility study: the protocol was reconstructed from the app but is not yet hardware-test-certified. Read-out always works. Write commands are only enabled where the report proves them; anything unproven is greyed out with the reason shown.",
 
     liveTitle: "Live values from the scooter",
     tileSpeed: "Speed",
@@ -176,32 +205,29 @@ window.I18N = {
     valUnlocked: "open",
     liveHint: "The live values come straight from the scooter. Not every model provides every field; where it does not, a dash is shown. The raw messages are also logged as hex.",
 
+    tuneTitle: "Tuning and lock",
     s3Title: "eKFV limiter",
     lblOpen: "Open (km/h)",
     lblEkfv: "eKFV (km/h)",
     speedValuesHint: "\"Limiter off\" writes the open value, \"Limiter on\" the eKFV value (default 22 km/h, i.e. 20 plus 10 percent tolerance). Tenths are allowed, for example 22.4. Both values are remembered in this browser.",
-    lblMode: "Ride mode",
+    settingsHint: "Two values, open and eKFV. \"Limiter on\" writes the eKFV value deterministically as the top speed. \"Limiter off\" (raising) is greyed out because it is not statically proven whether the controller actually rides the higher value.",
+    modeTitle: "Ride mode",
     modeEco: "eco",
     modeNormal: "normal",
     modeSport: "sport",
-    btnSetMode: "Set",
-    settingsHint: "Two values, open and eKFV. The Unlock/Lock button writes the respective value as the top speed to the scooter. Whether the controller actually rides high values is what the test on the vehicle shows.",
-    modeTitle: "Ride mode",
 
-    noSpeedTitle: "No speed over Bluetooth",
-    noSpeedHint: "This model (SO6 or SO4 UL) cannot set the top speed over Bluetooth. Lock and unlock still work.",
-
+    immobTitle: "Anti-theft",
     btnUnlock: "Unlock",
     btnLock: "Lock",
     drosselOff: "Limiter off",
     drosselOn: "Limiter on",
-    lblVlock: "Anti-Theft",
 
     batTitle: "Battery unlock",
     btnBat: "Battery unlock",
+    batHint: "Releases the lock of the removable battery (anti-theft). Nothing to do with speed.",
 
     moreTitle: "More settings",
-    moreHint: "Extra functions your model supports: anti-theft lock, headlight, dark mode, zero-start, unit, indicator light and the Bluetooth name. Only what your model can do is shown.",
+    moreHint: "Extra functions, depending on the model: headlight, dark mode, zero-start, indicator light and unit. Functions your model cannot do are greyed out with the reason shown.",
     lblLight: "Headlight",
     lblDark: "Dark mode",
     lblZero: "Zero-start",
@@ -212,7 +238,22 @@ window.I18N = {
     optKm: "km/h (metric)",
     optMi: "mph (imperial)",
     btnSend: "Send",
-    batHint: "Releases the lock of the removable battery (anti-theft). Nothing to do with speed.",
+
+    advTitle: "Advanced settings",
+    advNote: "SoFlow exposes no expert or register write surface. The app's admin/service area sends the same commands over Bluetooth (0xA9 / 0xA3 / 0xA0), so nothing extra, and needs no account. The post-connect configuration (values 40 / maxCapableSpeed) is not reconstructed in the report and is deliberately not replicated. There is no OTA / firmware flashing over this path.",
+
+    reasonSpeedHonor: "Whether the controller actually rides a top speed raised via 0xA9 or clamps it in firmware is not statically proven (report F3).",
+    reasonNoBleSpeed: "SO6 / SO4 UL have no BLE speed command.",
+    reasonSo4V42: "SO4 on firmware 4.x has no 0xA9.",
+    reasonRideModeNA: "Not supported on this family (SO6 / SO4 UL).",
+    reasonLockMoving: "Locking while moving is not possible (report / §16).",
+    reasonSo6Token: "SO6 lock/unlock needs an undocumented session token from the handshake (unproven).",
+    reasonBattery: "0xD5 only on the So5 class; SO4 from firmware 5.2 on; SO3/SO6 do not have it.",
+    reasonSo5Only: "Available on the So5 class only.",
+    reasonIndicatorSo4: "Only on the SO4 path.",
+    reasonIndicatorV51: "SO4 V51 has no indicator command.",
+    reasonUnit: "So5 class and SO3 only.",
+    reasonSo3Uncertain: "Note: the SO3 ride-mode/unit mapping is unconfirmed.",
 
     encTitle: "Encryption",
     encStatePrefix: "Active:",
@@ -227,16 +268,31 @@ window.I18N = {
     scGoSlow: "Limit now",
     scNoBt: "This browser has no Bluetooth. Open the link in Bluefy on iPhone or Chrome on Android. Safari will not work.",
     shortcutIos: "iOS (Bluefy): add a shortcut pointing at this address.",
-    shortcutAndroid: "Android (Chrome): a home-screen shortcut pointing at this address.",
     shortcutNote: "Opened through such a shortcut, a big button appears at the top. Tap it once in Bluefy and pick your scooter, then the page sets the speed. Unlock sets the open value, lock the eKFV value. The scooter has to be on and in range. Only for models that can set the speed over Bluetooth.",
 
     s6Title: "Protocol log",
+    publicLogLabel: "Anonymize log to share publicly",
+    publicLogTitle: "Anonymize log",
+    publicLogHelpHtml: "<p>When this is on (the default), the log is anonymized: Bluetooth / MAC addresses, serial numbers, keys/tokens and raw device IDs are redacted. So you can safely post it on GitHub or share it for troubleshooting.</p><p>Only turn it off if you need the full log <b>locally</b> for yourself - then do not share it publicly.</p>",
+    diagLogLabel: "Diagnostic log (capture everything raw)",
+    diagLogTitle: "Diagnostic log",
+    diagLogHelpHtml: "<p>Also records every raw frame, including the ones normally dropped, plus other notify channels. For troubleshooting only.</p><p>Turning it on prints a diagnostic header (build, browser, platform). Review the log yourself before sharing.</p>",
     btnCopyLog: "Copy log",
     btnClearLog: "Clear log",
-    btnDiag: "Diagnostics: all devices",
-    diagHint: "Shows every Bluetooth device (not only SFS), reads the real advertised name, classifies it and lists the GATT services after connecting. For models that otherwise do not show up. Then copy the log and send it.",
+    btnSaveLog: "Save as .txt",
+    diagOn: "Diagnostic log on: all frames logged raw.",
+    diagOff: "Diagnostic log off.",
+    logCleared: "Log cleared.",
+    logCopied: "Log copied to clipboard.",
+    logSaved: "Log saved as file.",
     logTxLegend: "TX / blue = sent",
     logRxLegend: "RX / brown = received",
+
+    confirmTitle: "Are you sure?",
+    confirmCancel: "Cancel",
+    confirmYes: "Yes, send",
+    confirmBattery: "The battery lock will be unlocked over Bluetooth. On your own vehicle only. Continue?",
+    confirmLock: "The vehicle will be locked over Bluetooth. Only at standstill and on your own vehicle. Continue?",
 
     footGuide: "Guide",
     footDisclaimer: "Disclaimer",
@@ -248,7 +304,6 @@ window.I18N = {
     footTrademarks: "Trademarks",
     buildLabel: "build",
     docClose: "Close",
-    sunsetBannerHtml: "<b>This tool is moving.</b> This repository is <b>no longer maintained</b> - please switch to the new tool: <a href=\"https://lb-tool-web.pages.dev/\" target=\"_blank\" rel=\"noopener\">lb-tool-web.pages.dev</a>. Trouble switching? Open an <a href=\"https://github.com/Laufbursche42/Laufbursche42/issues/new\" target=\"_blank\" rel=\"noopener\">issue on GitHub</a> or send a <a href=\"https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/\" target=\"_blank\" rel=\"noopener\">PM on the eScooter-Stammtisch forum</a>.",
     docLoading: "loading ...",
     docFail: "The document could not be loaded.",
     docEnglish: "(English)",

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-SOFLOW SO4 - BLE Speed Tester (Python/bleak Variante)
+SOFLOW SO4 - BLE Speed Tester (Python/bleak variant)
 
-Sendet das per Reverse Engineering ermittelte Max-Speed-Kommando über den
-Nordic-UART-Service. Nur am eigenen Fahrzeug auf privatem Gelände. Nutzung auf eigenes Risiko.
+Sends the reverse-engineered max-speed command over the Nordic UART service.
+On your own vehicle on private ground only. Use at your own risk.
 
 Installation:
     pip install bleak
 
-Beispiele:
+Examples:
     python soflow_speed.py --scan
-    python soflow_speed.py --address <MAC-oder-UUID> --speed 25
+    python soflow_speed.py --address <MAC-or-UUID> --speed 25
     python soflow_speed.py --address <...> --speed 25 --encrypt
     python soflow_speed.py --address <...> --raw A9:00FA
 """
@@ -19,13 +19,13 @@ import argparse
 import asyncio
 
 NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # App -> Gerät (write)
-NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"  # Gerät -> App (notify)
+NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # app -> device (write)
+NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"  # device -> app (notify)
 
-DEFAULT_KEY_HEX = "30572F52364B3F473050415811632D2B"  # So4 V52 Kommandoschlüssel
+DEFAULT_KEY_HEX = "30572F52364B3F473050415811632D2B"  # So4 V52 command key
 
 
-# ---------- Frame-Bau ----------
+# ---------- frame building ----------
 def build_plain_frame(opcode, payload):
     body = [(len(payload) + 5) & 0xFF, opcode & 0xFF, 0x00] + [b & 0xFF for b in payload]
     chk = sum(body) & 0xFF
@@ -37,7 +37,7 @@ def speed_payload(kmh):
     return [(v >> 8) & 0xFF, v & 0xFF]
 
 
-# ---------- AES-128-ECB (nur Verschlüsselung, Zero-Padding) ----------
+# ---------- AES-128-ECB (encrypt only, zero padding) ----------
 def _gmul(a, b):
     p = 0
     for _ in range(8):
@@ -131,7 +131,7 @@ def frame_to_send(opcode, payload, encrypt, key_hex):
         return plain, plain
     key = bytes.fromhex(key_hex)
     if len(key) != 16:
-        raise ValueError("Schlüssel muss genau 16 Byte sein")
+        raise ValueError("key must be exactly 16 bytes")
     return aes_ecb_encrypt(plain, key), plain
 
 
@@ -139,14 +139,14 @@ def hexstr(b):
     return " ".join(f"{x:02X}" for x in b)
 
 
-# ---------- Selbsttest ----------
+# ---------- self-test ----------
 def _selftest():
-    # FIPS-197 Blockvektor: sichert die AES-Implementierung ab.
+    # FIPS-197 block vector: guards the AES implementation.
     k = bytes(range(16))
     p = bytes([0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
     fips = _encrypt_block(p, _key_expansion(k)).hex() == "69c4e0d86a7b0430d8cdb78070b4c55a"
-    # Verifizierter SO4-Vektor: 20 km/h Klartext-Frame, mit SO4-Schlüssel verschlüsselt.
+    # Verified SO4 vector: 20 km/h plaintext frame, encrypted with the SO4 key.
     cipher, _ = frame_to_send(0xA9, speed_payload(20), True, DEFAULT_KEY_HEX)
     so4 = hexstr(cipher) == "69 57 0A C6 1E 3B 0F 01 9A BF C5 D6 BF AC 0A 7E"
     return fips and so4
@@ -155,10 +155,10 @@ def _selftest():
 # ---------- BLE ----------
 async def do_scan():
     from bleak import BleakScanner
-    print("Scanne 8 Sekunden ...")
+    print("Scanning 8 seconds ...")
     devices = await BleakScanner.discover(timeout=8.0)
     for d in devices:
-        print(f"  {d.address}  {d.name or '(ohne Namen)'}")
+        print(f"  {d.address}  {d.name or '(no name)'}")
 
 
 async def do_send(address, frame):
@@ -168,37 +168,37 @@ async def do_send(address, frame):
         print("RX  " + hexstr(data))
 
     async with BleakClient(address) as client:
-        print("Verbunden:", client.is_connected)
+        print("Connected:", client.is_connected)
         try:
             await client.start_notify(NUS_TX, on_notify)
         except Exception as e:
-            print("Notify nicht möglich:", e)
+            print("Notify not possible:", e)
         print("TX  " + hexstr(frame))
         await client.write_gatt_char(NUS_RX, frame, response=False)
-        print("Gesendet. Warte 3 Sekunden auf Antwort ...")
+        print("Sent. Waiting 3 seconds for a reply ...")
         await asyncio.sleep(3.0)
 
 
 def main():
     ap = argparse.ArgumentParser(description="SOFLOW SO4 BLE Speed Tester")
-    ap.add_argument("--scan", action="store_true", help="BLE-Geräte auflisten")
-    ap.add_argument("--address", help="MAC (Windows/Linux) oder UUID (macOS) des Scooters")
-    ap.add_argument("--speed", type=float, help="Ziel-km/h für Opcode 0xA9")
-    ap.add_argument("--mode", type=int, choices=[0, 1, 2], help="Fahrmodus setzen (eco0 normal1 sport2)")
-    ap.add_argument("--raw", help="Rohkommando OPCODE:PAYLOADHEX, z. B. A9:00FA")
-    ap.add_argument("--encrypt", action="store_true", help="AES-128-ECB (Firmware ab 5.2)")
-    ap.add_argument("--key", default=DEFAULT_KEY_HEX, help="AES-Schlüssel als Hex (16 Byte)")
+    ap.add_argument("--scan", action="store_true", help="list BLE devices")
+    ap.add_argument("--address", help="MAC (Windows/Linux) or UUID (macOS) of the scooter")
+    ap.add_argument("--speed", type=float, help="target km/h for opcode 0xA9")
+    ap.add_argument("--mode", type=int, choices=[0, 1, 2], help="set ride mode (eco0 normal1 sport2)")
+    ap.add_argument("--raw", help="raw command OPCODE:PAYLOADHEX, e.g. A9:00FA")
+    ap.add_argument("--encrypt", action="store_true", help="AES-128-ECB (firmware 5.2 and up)")
+    ap.add_argument("--key", default=DEFAULT_KEY_HEX, help="AES key as hex (16 bytes)")
     args = ap.parse_args()
 
     if not _selftest():
-        print("WARNUNG: AES-Selbsttest fehlgeschlagen. Verschlüsselung nicht nutzen.")
+        print("WARNING: AES self-test failed. Do not use encryption.")
 
     if args.scan:
         asyncio.run(do_scan())
         return
 
     if not args.address:
-        ap.error("--address wird gebraucht (oder --scan)")
+        ap.error("--address is required (or --scan)")
 
     if args.raw:
         op_s, _, pl_s = args.raw.partition(":")
@@ -209,12 +209,12 @@ def main():
     elif args.mode is not None:
         opcode, payload = 0xA3, [args.mode]
     else:
-        ap.error("Nichts zu senden. Nutze --speed, --mode oder --raw.")
+        ap.error("nothing to send. Use --speed, --mode or --raw.")
 
     frame, plain = frame_to_send(opcode, payload, args.encrypt, args.key)
-    print("Klartext-Frame:", hexstr(plain))
+    print("plaintext frame:", hexstr(plain))
     if args.encrypt:
-        print("Verschlüsselt: ", hexstr(frame))
+        print("encrypted:      ", hexstr(frame))
     asyncio.run(do_send(args.address, frame))
 
 

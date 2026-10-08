@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v51';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v52';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -302,11 +302,6 @@ let publicLog = true;        // anonymize the log (default on); toggled by the P
 let logDeviceId = null;      // the connected device id, redacted while Public Log is on
 let diagOn = false;          // diagnostic raw-frame tap (extra notify chars), default off each session
 
-function ts() {
-  const d = new Date();
-  const p = (n, w) => String(n).padStart(w || 2, '0');
-  return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + '.' + p(d.getMilliseconds(), 3);
-}
 // One central redaction filter shared by display/copy/save: device id, MAC, key/token/serial/uid
 // assignments and long hex runs, so a raw key or id never leaves the page while Public Log is on.
 function redact(text) {
@@ -325,7 +320,7 @@ function anonymize(s) {
   return redact(s.replace(/\x01[^\x01]*\x01/g, 'XX').replace(/\x01/g, ''));
 }
 function log(m, cls) {
-  const raw = '[' + ts() + '] ' + m;
+  const raw = '[' + new Date().toTimeString().slice(0, 8) + '] ' + m;
   logBuffer.push({ raw, cls: cls || '' });
   const pre = $('log'); if (!pre) return;
   const span = document.createElement('span');
@@ -351,10 +346,11 @@ function logDiagnosticHeader() {
   log('=== sf-unlock diagnostic ===');
   log('build: ' + BUILD);
   log('time: ' + new Date().toISOString());
-  log('userAgent: ' + (nav.userAgent || '(unknown)'));
-  log('platform: ' + (nav.platform || '(unknown)'));
+  log('userAgent: ' + (nav.userAgent || '?'));
+  log('platform: ' + (nav.platform || '?'));
   log('webBluetooth: ' + (nav.bluetooth ? 'yes' : 'no'));
-  log('============================');
+  log('protocol self-test: ' + (AES_OK ? 'OK' : 'FAILED'));
+  log('================================');
 }
 function logText() { return logBuffer.map(e => anonymize(e.raw)).join('\n'); }
 async function copyLog() {
@@ -434,7 +430,7 @@ function modeTile(code) { return MODE_TILE[code] || ('Modus ' + code); }
 function setActiveMode(code) {
   [0, 1, 2].forEach(i => { const b = $('btn-mode-' + i); if (b) b.classList.toggle('active', i === code); });
 }
-function resetTiles() { ['t-speed', 't-mode', 't-batt', 't-lock', 't-volt', 't-fw', 't-curr', 't-power', 't-err', 't-trip', 't-total'].forEach(id => setTile(id, null)); }
+function resetTiles() { ['t-speed', 't-mode', 't-batt', 't-lock', 't-volt', 't-fw', 't-curr', 't-power', 't-err', 't-trip', 't-total', 't-light', 't-unit', 't-energy', 't-duration', 't-dark', 't-fw-disp', 't-fw-cpu'].forEach(id => setTile(id, null)); }
 function statusLabel(s) {
   const map = { disconnected: 'stDisconnected', connecting: 'stConnecting', linking: 'stLinking',
     connected: 'stConnected', 'no-service': 'stNoService', 'no-char': 'stNoChar' };
@@ -527,7 +523,11 @@ function applyGating() {
   ctlReason('reason-unit', (resolved && !unitSup) ? 'reasonUnit' : null);
 }
 // Retained for the existing call sites; gating is centralized in applyGating().
-function setControlsEnabled(on) { applyGating(); }
+// Telemetry + settings cards stay hidden until connected; on load only Intro + Verbindung + Log show.
+function setControlsEnabled(on) {
+  ['live-card', 'batt-card', 'more-card', 'raw-card'].forEach(id => { const el = $(id); if (el) el.hidden = !on; });
+  applyGating();
+}
 function openSpeedValue() { const v = parseFloat(($('speed-in') || {}).value); return isNaN(v) ? 30 : v; }
 function ekfvSpeedValue() { const v = parseFloat(($('ekfv-in') || {}).value); return isNaN(v) ? 22 : v; }
 // Two send-only buttons, NO remembered state: the scooter reports no speed-limit state, so a remembered
@@ -1002,6 +1002,10 @@ function decodeRealtimeSo4(b) {
   setTile('t-err', errCode === 0 ? 'OK' : String(errCode));
   setTile('t-trip', trip.toFixed(1) + ' km');
   setTile('t-total', total + ' km');
+  setTile('t-light', t((st & 0x01) ? 'valOn' : 'valOff'));   // headlight bit0 (gesamt byte4 bit0; app line above)
+  setTile('t-unit', (st & 0x10) ? 'mph' : 'km/h');           // unit bit4
+  setTile('t-fw-disp', disp);                                // display version byte 13
+  setTile('t-fw-cpu', cpu);                                  // cpu version byte 14
   log('  realtime: speed=' + speed.toFixed(1) + 'km/h mode=' + modeCode + ' ' + locked +
       ' batt=' + batt + '% ' + voltage.toFixed(1) + 'V ' + current.toFixed(1) + 'A unit=' + unit +
       ' light=' + headlight + ' err=' + errCode + ' fw(proto/disp/cpu)=' + pv + '/' + disp + '/' + cpu +
@@ -1029,16 +1033,20 @@ function decodeRealtimeSo5(b) {
   setTile('t-lock', t((st & 0x80) ? 'valLocked' : 'valUnlocked'));
   setTile('t-volt', voltage.toFixed(1) + ' V');
   setTile('t-curr', current.toFixed(1) + ' A');
+  setTile('t-light', t((st & 0x01) ? 'valOn' : 'valOff'));   // headlight bit0 (gesamt byte4 bit0)
+  setTile('t-unit', (st & 0x10) ? 'mph' : 'km/h');           // unit bit4
   if (b.length >= 15) { const eh = bytesToHex(b.subarray(11, 15)); parts.push('err=' + eh); setTile('t-err', /^(00 )*00$/.test(eh) ? 'OK' : eh); }
   if (b.length >= 18) {
     const pv = (b[15] >> 4) + '.' + (b[15] & 0x0f);
     parts.push('fw(proto/disp/cpu)=' + pv + '/' + (b[16] >> 4) + '.' + (b[16] & 0x0f) + '/' + (b[17] >> 4) + '.' + (b[17] & 0x0f));
     setTile('t-fw', pv);
+    setTile('t-fw-disp', (b[16] >> 4) + '.' + (b[16] & 0x0f));   // display version byte 16
+    setTile('t-fw-cpu', (b[17] >> 4) + '.' + (b[17] & 0x0f));    // cpu version byte 17
   }
   if (b.length >= 22) { const trip = ((b[18] << 8) | b[19]) / 10, total = (b[20] << 8) | b[21]; parts.push('trip=' + trip.toFixed(1) + 'km', 'total=' + total + 'km'); setTile('t-trip', trip.toFixed(1) + ' km'); setTile('t-total', total + ' km'); }
   if (b.length >= 23) { parts.push('batt=' + b[22] + '%'); setTile('t-batt', b[22] + ' %'); }
-  if (b.length >= 26) parts.push('dur=' + b[23] + 'h' + b[24] + 'm' + b[25] + 's');
-  if (b.length >= 27) parts.push('dark=' + (b[26] === 0 ? 'on' : 'off'));   // darkMode active when byte is 0
+  if (b.length >= 26) { parts.push('dur=' + b[23] + 'h' + b[24] + 'm' + b[25] + 's'); setTile('t-duration', b[23] + 'h ' + b[24] + 'm ' + b[25] + 's'); }   // duration bytes 23-25
+  if (b.length >= 27) { parts.push('dark=' + (b[26] === 0 ? 'on' : 'off')); setTile('t-dark', t(b[26] === 0 ? 'valOn' : 'valOff')); }   // darkMode active when byte is 0 (byte 26, inverted)
   log('  realtime: ' + parts.join(' '), 'log-ok');
 }
 
@@ -1054,14 +1062,16 @@ function decodeSo3Realtime(b) {
   const current = ((b[9] << 8) | b[10]) / 10;
   const parts = ['speed=' + speed.toFixed(1) + 'km/h', 'mode=' + modeCode + ' (MessedUp mapping, decode uncertain)',
     'unit=' + unit, voltage.toFixed(1) + 'V', current.toFixed(1) + 'A'];
-  let power = null;
-  if (b.length >= 15) { power = ((b[11] << 8) | b[12]) / 10; const energy = ((b[13] << 8) | b[14]) / 10; parts.push('power=' + power.toFixed(1) + 'W', 'energy=' + energy.toFixed(1) + 'Wh'); }
+  let power = null, energy = null;
+  if (b.length >= 15) { power = ((b[11] << 8) | b[12]) / 10; energy = ((b[13] << 8) | b[14]) / 10; parts.push('power=' + power.toFixed(1) + 'W', 'energy=' + energy.toFixed(1) + 'Wh'); }
   setTile('t-speed', speed.toFixed(1) + ' km/h');
   setTile('t-mode', modeTile(modeCode));
   setActiveMode(modeCode);
   setTile('t-volt', voltage.toFixed(1) + ' V');
   setTile('t-curr', current.toFixed(1) + ' A');                       // SO3 current is proven (proto-spec §3)
+  setTile('t-unit', (st & 0x10) ? 'mph' : 'km/h');                    // SO3 unit bit4 (gesamt byte4 bit4)
   if (power != null) setTile('t-power', power.toFixed(1) + ' W');     // SO3 power is proven (len >= 15)
+  if (energy != null) setTile('t-energy', energy.toFixed(1) + ' Wh'); // SO3 energy bytes 13-14 /10 (gesamt)
   log('  SO3 0x1D: ' + parts.join(' '), 'log-ok');
 }
 
@@ -1107,7 +1117,7 @@ function decodeRealtimeSo6(d) {
   setTile('t-volt', (be(3) / 10).toFixed(1) + ' V');
   if (d.length >= 7) setTile('t-curr', (be(5) / 10).toFixed(1) + ' A');
   if (d.length >= 9) setTile('t-power', (be(7) / 10).toFixed(1) + ' W');
-  ['t-speed', 't-mode', 't-batt', 't-lock', 't-fw', 't-err', 't-trip', 't-total'].forEach(id => setTile(id, null));
+  ['t-speed', 't-mode', 't-batt', 't-lock', 't-fw', 't-err', 't-trip', 't-total', 't-light', 't-unit', 't-energy', 't-duration', 't-dark', 't-fw-disp', 't-fw-cpu'].forEach(id => setTile(id, null));
 }
 
 // --------------------------- writing frames + commands ---------------------------
@@ -1395,7 +1405,7 @@ function applyTheme(dark) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
   const b = $('btn-theme');
   if (b) {
-    b.innerHTML = dark ? '&#9728;' : '&#9790;';   // scan-ok: a fixed character, not user input
+    b.textContent = dark ? '\u2600' : '\u263E';
     b.setAttribute('aria-label', t(dark ? 'themeToLight' : 'themeToDark'));
     b.title = b.getAttribute('aria-label');
   }

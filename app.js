@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v54';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v55';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -389,7 +389,7 @@ function copyLogFallback(text) {
 // Help "?" icons: each card can show its explanation in a modal instead of a permanent paragraph.
 const HELP = {
   enc: ['encTitle', 'encHint'], speed: ['s3Title', 'settingsHint'], battery: ['batTitle', 'batHint'],
-  more: ['moreTitle', 'moreHint'], disclaimer: ['footDisclaimer', 'disclaimerText'],
+  more: ['moreTitle', 'moreHint'],
   publiclog: ['publicLogTitle', 'publicLogHelpHtml'], diaglog: ['diagLogTitle', 'diagLogHelpHtml'],
 };
 function openHelp(key) {
@@ -1382,6 +1382,7 @@ function applyLang() {
   { const el = $('link-license'); if (el) el.href = docFile('LICENSE'); }
   { const el = $('link-privacy'); if (el) el.href = docFile('PRIVACY'); }
   { const el = $('link-trademarks'); if (el) el.href = docFile('TRADEMARKS'); }
+  { const el = $('link-disclaimer'); if (el) el.href = docFile('DISCLAIMER'); }
   { const el = $('langs'); if (el) el.setAttribute('aria-label', t('langGroup')); }
   updateShortcutPrompt();   // the shortcut prompt text/label is dynamic too
   { const dark = document.documentElement.getAttribute('data-theme') !== 'light';
@@ -1426,6 +1427,7 @@ const DOC_TITLES = {
   'PRIVACY.de.md': 'footPrivacy', 'PRIVACY.md': 'footPrivacy',
   'LICENSE.de.md': 'footLicense', 'LICENSE.md': 'footLicense',
   'TRADEMARKS.de.md': 'footTrademarks', 'TRADEMARKS.md': 'footTrademarks',
+  'DISCLAIMER.de.md': 'footDisclaimer', 'DISCLAIMER.md': 'footDisclaimer',
   'README.md': 'footReadme',
 };
 const escHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1532,7 +1534,7 @@ function wireDocViewer() {
       return;
     }
     const disc = e.target.closest('[data-open-disclaimer]');
-    if (disc) { e.preventDefault(); openHelp('disclaimer'); return; }
+    if (disc) { e.preventDefault(); openDocFile(docFile('DISCLAIMER'), '', 'footDisclaimer'); return; }
     const a = e.target.closest('[data-doc], [data-docfile]');
     if (!a) return;
     e.preventDefault();
@@ -1549,7 +1551,6 @@ function wireDocViewer() {
 window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.help-btn').forEach(btn => btn.addEventListener('click', () => openHelp(btn.getAttribute('data-help'))));
   ['help-x', 'help-close'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', closeHelp); });
-  { const b = $('link-disclaimer'); if (b) b.addEventListener('click', e => { e.preventDefault(); openHelp('disclaimer'); }); }
   logDiagnosticHeader();
   initLangSwitch();
   initTheme();

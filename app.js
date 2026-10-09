@@ -11,7 +11,7 @@
 
 'use strict';
 
-const BUILD = 'v53';   // logged on load so a tester's log reveals which deployed build is running
+const BUILD = 'v54';   // logged on load so a tester's log reveals which deployed build is running
 
 // --------------------------- AES-128-ECB (encrypt + decrypt, zero padding) ---------------------------
 // S-box and round keys are computed at run time so a typo cannot slip into a constant table.
@@ -1607,9 +1607,9 @@ window.addEventListener('DOMContentLoaded', () => {
   { const pub = $('public-log'); if (pub) {
       try { publicLog = localStorage.getItem(LS_PUBLICLOG) !== '0'; } catch (e) { publicLog = true; }
       pub.checked = publicLog;
-      pub.addEventListener('change', () => { publicLog = pub.checked; try { localStorage.setItem(LS_PUBLICLOG, pub.checked ? '1' : '0'); } catch (e) {} renderLog(); });
+      pub.addEventListener('change', () => { publicLog = pub.checked; try { localStorage.setItem(LS_PUBLICLOG, pub.checked ? '1' : '0'); } catch (e) {} log('public-log: ' + (pub.checked ? 'on (anonymizing device name/id)' : 'off'), 'log-ok'); renderLog(); });
   } }
-  { const dg = $('diag-log'); if (dg) { dg.checked = false; dg.addEventListener('change', () => setDiag(dg.checked)); } }
+  { const dg = $('diag-log'); if (dg) { dg.checked = false; dg.addEventListener('change', () => { setDiag(dg.checked); log('diag-log: ' + (dg.checked ? 'on' : 'off'), 'log-ok'); }); } }
 
   setControlsEnabled(false);
   updateEncState();
